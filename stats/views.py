@@ -13,9 +13,17 @@ def calculate_standings():
     for match in matches:
         # Initialize teams if not exist
         if match.home_team not in standings:
-            standings[match.home_team] = {'team': match.home_team, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 'gf': 0, 'ga': 0, 'gd': 0, 'points': 0}
+            standings[match.home_team] = {
+                'team': match.home_team, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 
+                'gf': 0, 'ga': 0, 'gd': 0, 'points': 0,
+                'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0
+            }
         if match.away_team not in standings:
-            standings[match.away_team] = {'team': match.away_team, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 'gf': 0, 'ga': 0, 'gd': 0, 'points': 0}
+            standings[match.away_team] = {
+                'team': match.away_team, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 
+                'gf': 0, 'ga': 0, 'gd': 0, 'points': 0,
+                'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0
+            }
             
         # Update played
         standings[match.home_team]['played'] += 1
@@ -26,6 +34,20 @@ def calculate_standings():
         standings[match.home_team]['ga'] += match.ftag
         standings[match.away_team]['gf'] += match.ftag
         standings[match.away_team]['ga'] += match.fthg
+        
+        # Update advanced stats
+        standings[match.home_team]['shots'] += match.hs
+        standings[match.away_team]['shots'] += match.as_shots
+        standings[match.home_team]['shots_on_target'] += match.hst
+        standings[match.away_team]['shots_on_target'] += match.ast
+        standings[match.home_team]['corners'] += match.hc
+        standings[match.away_team]['corners'] += match.ac
+        standings[match.home_team]['fouls'] += match.hf
+        standings[match.away_team]['fouls'] += match.af
+        standings[match.home_team]['yellow_cards'] += match.hy
+        standings[match.away_team]['yellow_cards'] += match.ay
+        standings[match.home_team]['red_cards'] += match.hr
+        standings[match.away_team]['red_cards'] += match.ar
         
         # Update results
         if match.ftr == 'H':
@@ -69,11 +91,26 @@ def dashboard(request):
     chart_teams = [team['team'] for team in sorted_by_goals]
     chart_goals = [team['gf'] for team in sorted_by_goals]
     
+    # Yellow Cards Top 5
+    sorted_by_cards = sorted(standings, key=lambda x: x['yellow_cards'] + x['red_cards'], reverse=True)[:5]
+    cards_teams = [team['team'] for team in sorted_by_cards]
+    cards_count = [team['yellow_cards'] + team['red_cards'] for team in sorted_by_cards]
+
+    # Shots Top 5
+    sorted_by_shots = sorted(standings, key=lambda x: x['shots'], reverse=True)[:5]
+    shots_teams = [team['team'] for team in sorted_by_shots]
+    shots_count = [team['shots'] for team in sorted_by_shots]
+    
     context = {
         'standings': standings,
         'recent_matches': recent_matches,
+        'matches_played': Match.objects.count(),
         'chart_teams': chart_teams,
         'chart_goals': chart_goals,
+        'cards_teams': cards_teams,
+        'cards_count': cards_count,
+        'shots_teams': shots_teams,
+        'shots_count': shots_count,
     }
     
     return render(request, 'stats/dashboard.html', context)
