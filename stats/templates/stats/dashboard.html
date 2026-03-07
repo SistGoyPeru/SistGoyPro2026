@@ -219,6 +219,75 @@
                     </div>
                 </div>
 
+                <!-- Additional Stats Row -->
+                <div class="row mt-4">
+                    <!-- Home vs Away Points -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Rendimiento (Local vs Visitante)</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Equipo</th>
+                                                <th class="text-center">Pts Local</th>
+                                                <th class="text-center">Pts Visitante</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for team in standings|slice:":8" %}
+                                            <tr>
+                                                <td class="fw-bold" style="font-size: 0.85rem;">{{ team.team }}</td>
+                                                <td class="text-center text-primary fw-bold">{{ team.home_pts }}</td>
+                                                <td class="text-center text-warning fw-bold">{{ team.away_pts }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Average Winning Odds -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Cuota Media de Victoria</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Equipo</th>
+                                                <th class="text-center text-info" title="Cuota media pagada en partidos ganados">Cuota Ganadora</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for team in standings|slice:":8" %}
+                                            <tr>
+                                                <td class="fw-bold" style="font-size: 0.85rem;">{{ team.team }}</td>
+                                                <td class="text-center">
+                                                    {% if team.avg_win_odds > 0 %}
+                                                        <span class="badge bg-info text-dark">x {{ team.avg_win_odds|floatformat:2 }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Right Column: Stats & Charts -->
