@@ -78,6 +78,7 @@
             font-size: 2rem;
             font-weight: 700;
             background: -webkit-linear-gradient(#00d2ff, #3a7bd5);
+            background-clip: padding-box;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -148,6 +149,76 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Advanced Stats Section -->
+                <div class="row mt-4">
+                    <!-- BTTS & Over 2.5 Stats -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Estadísticas de Goles (%)</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Equipo</th>
+                                                <th class="text-center" title="Ambos Marcan">AEM</th>
+                                                <th class="text-center" title="Más de 2.5 Goles">+2.5</th>
+                                                <th class="text-center" title="Valla Invicta">Cero</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for team in standings|slice:":8" %}
+                                            <tr>
+                                                <td class="fw-bold" style="font-size: 0.85rem;">{{ team.team }}</td>
+                                                <td class="text-center"><span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25">{{ team.btts_pct }}%</span></td>
+                                                <td class="text-center"><span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">{{ team.over_25_pct }}%</span></td>
+                                                <td class="text-center"><span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-25">{{ team.cs_pct }}%</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Half Time Standings -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Resultados al Medio Tiempo</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Equipo</th>
+                                                <th class="text-center text-success">G</th>
+                                                <th class="text-center text-secondary">E</th>
+                                                <th class="text-center text-danger">P</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for team in standings|slice:":8" %}
+                                            <tr>
+                                                <td class="fw-bold" style="font-size: 0.85rem;">{{ team.team }}</td>
+                                                <td class="text-center">{{ team.ht_won }}</td>
+                                                <td class="text-center">{{ team.ht_drawn }}</td>
+                                                <td class="text-center">{{ team.ht_lost }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Right Column: Stats & Charts -->

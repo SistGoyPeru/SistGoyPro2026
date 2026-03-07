@@ -16,13 +16,15 @@ def calculate_standings():
             standings[match.home_team] = {
                 'team': match.home_team, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 
                 'gf': 0, 'ga': 0, 'gd': 0, 'points': 0,
-                'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0
+                'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0,
+                'btts': 0, 'over_25': 0, 'clean_sheets': 0, 'ht_won': 0, 'ht_drawn': 0, 'ht_lost': 0
             }
         if match.away_team not in standings:
             standings[match.away_team] = {
                 'team': match.away_team, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 
                 'gf': 0, 'ga': 0, 'gd': 0, 'points': 0,
-                'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0
+                'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0,
+                'btts': 0, 'over_25': 0, 'clean_sheets': 0, 'ht_won': 0, 'ht_drawn': 0, 'ht_lost': 0
             }
             
         # Update played
@@ -64,10 +66,46 @@ def calculate_standings():
             standings[match.away_team]['drawn'] += 1
             standings[match.away_team]['points'] += 1
             
-    # Calculate goal difference and convert to list
+        # Update Half Time results
+        if match.htr == 'H':
+            standings[match.home_team]['ht_won'] += 1
+            standings[match.away_team]['ht_lost'] += 1
+        elif match.htr == 'A':
+            standings[match.away_team]['ht_won'] += 1
+            standings[match.home_team]['ht_lost'] += 1
+        else:
+            standings[match.home_team]['ht_drawn'] += 1
+            standings[match.away_team]['ht_drawn'] += 1
+            
+        # BTTS (Both Teams To Score)
+        if match.fthg > 0 and match.ftag > 0:
+            standings[match.home_team]['btts'] += 1
+            standings[match.away_team]['btts'] += 1
+            
+        # Over 2.5 Goals
+        if (match.fthg + match.ftag) > 2:
+            standings[match.home_team]['over_25'] += 1
+            standings[match.away_team]['over_25'] += 1
+            
+        # Clean Sheets
+        if match.ftag == 0:
+            standings[match.home_team]['clean_sheets'] += 1
+        if match.fthg == 0:
+            standings[match.away_team]['clean_sheets'] += 1
+            
+    # Calculate goal difference and percentages
     standings_list = []
     for team_data in standings.values():
         team_data['gd'] = team_data['gf'] - team_data['ga']
+        if team_data['played'] > 0:
+            team_data['btts_pct'] = round((team_data['btts'] / team_data['played']) * 100)
+            team_data['over_25_pct'] = round((team_data['over_25'] / team_data['played']) * 100)
+            team_data['cs_pct'] = round((team_data['clean_sheets'] / team_data['played']) * 100)
+        else:
+            team_data['btts_pct'] = 0
+            team_data['over_25_pct'] = 0
+            team_data['cs_pct'] = 0
+            
         standings_list.append(team_data)
         
     # Sort by points (desc), then goal difference (desc), then goals for (desc)
