@@ -3,6 +3,11 @@ from django.db.models import Count, Sum, Q, F
 from django.db.models.functions import Coalesce
 from .models import Match
 from .utils import fetch_and_update_matches
+import pandas as pd
+import numpy as np
+import xgboost as xgb
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 def calculate_standings():
     # Get all matches
@@ -189,3 +194,92 @@ def dashboard(request):
     }
     
     return render(request, 'stats/dashboard.html', context)
+
+
+def xgb_predict(request):
+    """
+    Entrena el modelo XGBoost en memoria con los datos de SQLite
+    y predice resultados basados en las características del Mediotiempo.
+    """
+    matches = Match.objects.exclude(avg_h=0).exclude(avg_d=0).exclude(avg_a=0)
+    
+    data = []
+    for m in matches:
+        data.append({
+            'home_team': m.home_team,
+            'away_team': m.away_team,
+            'HTHG': m.hthg,
+            'HTAG': m.htag,
+            'AvgH': m.avg_h,
+            'AvgD': m.avg_d,
+            'AvgA': m.avg_a,
+            'B365_Over25': m.b365_o25,
+            'B365_Under25': m.b365_u25,
+            'FTR': m.ftr,
+            'HTR': m.htr
+        })
+        
+    df = pd.DataFrame(data)
+    y_map = {'H': 0, 'D': 1, 'A': 2}
+    inv_map = {0: 'Local', 1: 'Empate', 2: 'Visita'}
+    
+    df['target'] = df['FTR'].map(y_map)
+    df['HTR_encoded'] = df['HTR'].map(y_map)
+    df['HT_Goal_Diff'] = df['HTHG'] - df['HTAG']
+    
+    df = df.dropna(subset=['target', 'HTR_encoded'])
+    
+    features = ['HTHG', 'HTAG', 'AvgH', 'AvgD', 'AvgA', 'B365_Over25', 'B365_Under25', 'HTR_encoded', 'HT_Goal_Diff']
+    
+    X = df[features]
+    y = df['target']
+    
+    # 80/20 Split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    
+    model = xgb.XGBClassifier(
+        objective='multi:softprob', 
+        eval_metric='mlogloss',
+        max_depth=4,
+        learning_rate=0.05,
+        n_estimators=100,
+        random_state=42
+    )
+    
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    y_pred_proba = model.predict_proba(X_test)
+    
+    acc = accuracy_score(y_test, y_pred)
+    
+    # Preparamos las predicciones para mandarlas al template
+    test_indices = X_test.index
+    test_df = df.loc[test_indices].copy()
+    test_df['pred_class'] = y_pred
+    test_df['pred_label'] = test_df['pred_class'].map(inv_map)
+    test_df['actual_label'] = test_df['target'].map(inv_map)
+    
+    # Extraemos el % de confianza (probabilidad máxima de la opción elegida)
+    test_df['confidence'] = np.max(y_pred_proba, axis=1) * 100
+    
+    predictions = []
+    # Mostramos los ultimos 25 partidos de prueba del dataset
+    for _, row in test_df.tail(25)[::-1].iterrows():
+        predictions.append({
+            'home_team': row['home_team'],
+            'away_team': row['away_team'],
+            'ht_score': f"{int(row['HTHG'])} - {int(row['HTAG'])}",
+            'actual': row['actual_label'],
+            'predicted': row['pred_label'],
+            'confidence': round(row['confidence'], 1),
+            'correct': row['pred_label'] == row['actual_label']
+        })
+        
+    context = {
+        'accuracy': round(acc * 100, 1),
+        'predictions': predictions,
+        'total_matches': len(df),
+        'test_matches': len(y_test)
+    }
+    
+    return render(request, 'stats/predict.html', context)
