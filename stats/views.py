@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.db.models import Count, Sum, Q, F
 from django.db.models.functions import Coalesce
 from .models import Match
+from .utils import fetch_and_update_matches
 
 def calculate_standings():
     # Get all matches
@@ -57,6 +58,9 @@ def calculate_standings():
     return standings_list
 
 def dashboard(request):
+    # Try fetching updates from URL. Cached internally to prevent spamming.
+    fetch_and_update_matches()
+
     standings = calculate_standings()
     recent_matches = Match.objects.all()[:10]
     
