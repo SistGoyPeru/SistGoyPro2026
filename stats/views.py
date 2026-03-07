@@ -17,14 +17,18 @@ def calculate_standings():
                 'team': match.home_team, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 
                 'gf': 0, 'ga': 0, 'gd': 0, 'points': 0,
                 'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0,
-                'btts': 0, 'over_25': 0, 'clean_sheets': 0, 'ht_won': 0, 'ht_drawn': 0, 'ht_lost': 0
+                'btts': 0, 'over_25': 0, 'clean_sheets': 0, 'ht_won': 0, 'ht_drawn': 0, 'ht_lost': 0,
+                'home_pts': 0, 'away_pts': 0, 'avg_win_odds': 0.0, 'win_odds_sum': 0.0,
+                'comebacks': 0, 'collapses': 0, 'sh_goals': 0, 'sh_conceded': 0
             }
         if match.away_team not in standings:
             standings[match.away_team] = {
                 'team': match.away_team, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 
                 'gf': 0, 'ga': 0, 'gd': 0, 'points': 0,
                 'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0,
-                'btts': 0, 'over_25': 0, 'clean_sheets': 0, 'ht_won': 0, 'ht_drawn': 0, 'ht_lost': 0
+                'btts': 0, 'over_25': 0, 'clean_sheets': 0, 'ht_won': 0, 'ht_drawn': 0, 'ht_lost': 0,
+                'home_pts': 0, 'away_pts': 0, 'avg_win_odds': 0.0, 'win_odds_sum': 0.0,
+                'comebacks': 0, 'collapses': 0, 'sh_goals': 0, 'sh_conceded': 0
             }
             
         # Update played
@@ -51,20 +55,34 @@ def calculate_standings():
         standings[match.home_team]['red_cards'] += match.hr
         standings[match.away_team]['red_cards'] += match.ar
         
+        # Second Half Goals (Total Goals - Half Time Goals)
+        standings[match.home_team]['sh_goals'] += (match.fthg - match.hthg)
+        standings[match.home_team]['sh_conceded'] += (match.ftag - match.htag)
+        standings[match.away_team]['sh_goals'] += (match.ftag - match.htag)
+        standings[match.away_team]['sh_conceded'] += (match.fthg - match.hthg)
+        
         # Update results
         if match.ftr == 'H':
             standings[match.home_team]['won'] += 1
             standings[match.home_team]['points'] += 3
+            standings[match.home_team]['home_pts'] += 3
             standings[match.away_team]['lost'] += 1
+            if match.avg_h > 0:
+                standings[match.home_team]['win_odds_sum'] += match.avg_h
         elif match.ftr == 'A':
             standings[match.away_team]['won'] += 1
             standings[match.away_team]['points'] += 3
+            standings[match.away_team]['away_pts'] += 3
             standings[match.home_team]['lost'] += 1
+            if match.avg_a > 0:
+                standings[match.away_team]['win_odds_sum'] += match.avg_a
         else: # Draw
             standings[match.home_team]['drawn'] += 1
             standings[match.home_team]['points'] += 1
+            standings[match.home_team]['home_pts'] += 1
             standings[match.away_team]['drawn'] += 1
             standings[match.away_team]['points'] += 1
+            standings[match.away_team]['away_pts'] += 1
             
         # Update Half Time results
         if match.htr == 'H':
@@ -76,6 +94,14 @@ def calculate_standings():
         else:
             standings[match.home_team]['ht_drawn'] += 1
             standings[match.away_team]['ht_drawn'] += 1
+            
+        # Comebacks and Collapses (Points Dropped/Gained from HT)
+        if match.htr == 'A' and match.ftr in ['D', 'H']:
+            standings[match.home_team]['comebacks'] += 1
+            standings[match.away_team]['collapses'] += 1
+        elif match.htr == 'H' and match.ftr in ['D', 'A']:
+            standings[match.away_team]['comebacks'] += 1
+            standings[match.home_team]['collapses'] += 1
             
         # BTTS (Both Teams To Score)
         if match.fthg > 0 and match.ftag > 0:
@@ -101,10 +127,19 @@ def calculate_standings():
             team_data['btts_pct'] = round((team_data['btts'] / team_data['played']) * 100)
             team_data['over_25_pct'] = round((team_data['over_25'] / team_data['played']) * 100)
             team_data['cs_pct'] = round((team_data['clean_sheets'] / team_data['played']) * 100)
+            team_data['shot_conversion'] = round((team_data['gf'] / team_data['shots'] * 100), 1) if team_data['shots'] > 0 else 0
+            team_data['foul_per_card'] = round(team_data['fouls'] / (team_data['yellow_cards'] + team_data['red_cards']), 1) if (team_data['yellow_cards'] + team_data['red_cards']) > 0 else 0
         else:
             team_data['btts_pct'] = 0
             team_data['over_25_pct'] = 0
             team_data['cs_pct'] = 0
+            team_data['shot_conversion'] = 0
+            team_data['foul_per_card'] = 0
+            
+        if team_data['won'] > 0:
+            team_data['avg_win_odds'] = round(team_data['win_odds_sum'] / team_data['won'], 2)
+        else:
+            team_data['avg_win_odds'] = 0.0
             
         standings_list.append(team_data)
         

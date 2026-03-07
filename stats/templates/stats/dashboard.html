@@ -288,6 +288,110 @@
                     </div>
                 </div>
 
+                <!-- Deep Analytical Stats Row -->
+                <div class="row mt-4">
+                    <!-- Conversion & Discipline -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Puntería y Disciplina</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Equipo</th>
+                                                <th class="text-center" title="Porcentaje de tiros que terminan en gol">Puntería</th>
+                                                <th class="text-center" title="Faltas cometidas por cada tarjeta recibida">Faltas x Tarjeta</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for team in standings|slice:":8" %}
+                                            <tr>
+                                                <td class="fw-bold" style="font-size: 0.85rem;">{{ team.team }}</td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">{{ team.shot_conversion }}%</span>
+                                                </td>
+                                                <td class="text-center text-muted fw-bold">{{ team.foul_per_card }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comebacks & Collapses -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Remontadas y Desplomes (desde MT)</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Equipo</th>
+                                                <th class="text-center text-success" title="Partidos donde perdía al MT y terminó ganando/empatando al FT">Remontadas</th>
+                                                <th class="text-center text-danger" title="Partidos donde ganaba al MT y terminó perdiendo/empatando al FT">Desplomes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for team in standings|slice:":8" %}
+                                            <tr>
+                                                <td class="fw-bold" style="font-size: 0.85rem;">{{ team.team }}</td>
+                                                <td class="text-center text-success fw-bold">{{ team.comebacks }}</td>
+                                                <td class="text-center text-danger fw-bold">{{ team.collapses }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2nd Half Stats Row -->
+                <div class="row mt-2">
+                    <div class="col-12 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Rendimiento Exclusivo en la Segunda Mitad</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Equipo</th>
+                                                <th class="text-center text-success">Goles Anotados (2MT)</th>
+                                                <th class="text-center text-danger">Goles Recibidos (2MT)</th>
+                                                <th class="text-center">Diferencia (2MT)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for team in standings|slice:":8" %}
+                                            <tr>
+                                                <td class="fw-bold" style="font-size: 0.85rem;">{{ team.team }}</td>
+                                                <td class="text-center text-success fw-bold">{{ team.sh_goals }}</td>
+                                                <td class="text-center text-danger fw-bold">{{ team.sh_conceded }}</td>
+                                                <td class="text-center fw-bold text-info">
+                                                    {{ team.sh_goals|add:"-"|add:team.sh_conceded|default:"0" }}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Right Column: Stats & Charts -->
