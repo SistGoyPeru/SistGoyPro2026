@@ -9,6 +9,8 @@ class Match(models.Model):
     # Goals
     fthg = models.IntegerField(verbose_name="Full Time Home Goals")
     ftag = models.IntegerField(verbose_name="Full Time Away Goals")
+    hthg = models.IntegerField(verbose_name="Half Time Home Goals", default=0)
+    htag = models.IntegerField(verbose_name="Half Time Away Goals", default=0)
     
     # Advanced Stats
     hs = models.IntegerField(verbose_name="Home Shots", default=0)
@@ -31,6 +33,16 @@ class Match(models.Model):
         ('A', 'Away Win'),
     ]
     ftr = models.CharField(max_length=1, choices=RESULT_CHOICES, verbose_name="Full Time Result")
+    htr = models.CharField(max_length=1, choices=RESULT_CHOICES, verbose_name="Half Time Result", default='D')
+
+    # Betting Odds (Market averages indicate expectations)
+    avg_h = models.FloatField(verbose_name="Average Home Win Odds", default=0.0)
+    avg_d = models.FloatField(verbose_name="Average Draw Odds", default=0.0)
+    avg_a = models.FloatField(verbose_name="Average Away Win Odds", default=0.0)
+    
+    # Over / Under 2.5 Goals (Bet365 metrics)
+    b365_o25 = models.FloatField(verbose_name="Bet365 Over 2.5", default=0.0)
+    b365_u25 = models.FloatField(verbose_name="Bet365 Under 2.5", default=0.0)
 
     class Meta:
         verbose_name_plural = "Matches"

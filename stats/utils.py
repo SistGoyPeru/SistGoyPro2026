@@ -43,6 +43,13 @@ def fetch_and_update_matches():
                 except (ValueError, TypeError):
                     return 0
             
+            # Helper for safe float parsing
+            def safe_float(val):
+                try:
+                    return float(val)
+                except (ValueError, TypeError):
+                    return 0.0
+            
             match, created = Match.objects.update_or_create(
                 date=match_date,
                 home_team=home_team,
@@ -51,6 +58,9 @@ def fetch_and_update_matches():
                     'fthg': fthg,
                     'ftag': ftag,
                     'ftr': ftr,
+                    'htr': row.get('HTR', 'D'),
+                    'hthg': safe_int(row.get('HTHG')),
+                    'htag': safe_int(row.get('HTAG')),
                     'hs': safe_int(row.get('HS')),
                     'as_shots': safe_int(row.get('AS')),
                     'hst': safe_int(row.get('HST')),
@@ -62,7 +72,12 @@ def fetch_and_update_matches():
                     'hy': safe_int(row.get('HY')),
                     'ay': safe_int(row.get('AY')),
                     'hr': safe_int(row.get('HR')),
-                    'ar': safe_int(row.get('AR'))
+                    'ar': safe_int(row.get('AR')),
+                    'avg_h': safe_float(row.get('AvgH')),
+                    'avg_d': safe_float(row.get('AvgD')),
+                    'avg_a': safe_float(row.get('AvgA')),
+                    'b365_o25': safe_float(row.get('B365>2.5')),
+                    'b365_u25': safe_float(row.get('B365<2.5')),
                 }
             )
             

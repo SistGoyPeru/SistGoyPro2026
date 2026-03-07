@@ -379,8 +379,8 @@
                                                 <td class="fw-bold" style="font-size: 0.85rem;">{{ team.team }}</td>
                                                 <td class="text-center text-success fw-bold">{{ team.sh_goals }}</td>
                                                 <td class="text-center text-danger fw-bold">{{ team.sh_conceded }}</td>
-                                                <td class="text-center fw-bold text-info">
-                                                    {{ team.sh_goals|add:"-"|add:team.sh_conceded|default:"0" }}
+                                                <td class="text-center fw-bold {% if team.sh_gd > 0 %}text-info{% elif team.sh_gd < 0 %}text-warning{% endif %}">
+                                                    {% if team.sh_gd > 0 %}+{% endif %}{{ team.sh_gd }}
                                                 </td>
                                             </tr>
                                             {% endfor %}

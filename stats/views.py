@@ -19,7 +19,7 @@ def calculate_standings():
                 'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0,
                 'btts': 0, 'over_25': 0, 'clean_sheets': 0, 'ht_won': 0, 'ht_drawn': 0, 'ht_lost': 0,
                 'home_pts': 0, 'away_pts': 0, 'avg_win_odds': 0.0, 'win_odds_sum': 0.0,
-                'comebacks': 0, 'collapses': 0, 'sh_goals': 0, 'sh_conceded': 0
+                'comebacks': 0, 'collapses': 0, 'sh_goals': 0, 'sh_conceded': 0, 'sh_gd': 0
             }
         if match.away_team not in standings:
             standings[match.away_team] = {
@@ -28,7 +28,7 @@ def calculate_standings():
                 'shots': 0, 'shots_on_target': 0, 'corners': 0, 'fouls': 0, 'yellow_cards': 0, 'red_cards': 0,
                 'btts': 0, 'over_25': 0, 'clean_sheets': 0, 'ht_won': 0, 'ht_drawn': 0, 'ht_lost': 0,
                 'home_pts': 0, 'away_pts': 0, 'avg_win_odds': 0.0, 'win_odds_sum': 0.0,
-                'comebacks': 0, 'collapses': 0, 'sh_goals': 0, 'sh_conceded': 0
+                'comebacks': 0, 'collapses': 0, 'sh_goals': 0, 'sh_conceded': 0, 'sh_gd': 0
             }
             
         # Update played
@@ -123,6 +123,8 @@ def calculate_standings():
     standings_list = []
     for team_data in standings.values():
         team_data['gd'] = team_data['gf'] - team_data['ga']
+        team_data['sh_gd'] = team_data['sh_goals'] - team_data['sh_conceded']
+        
         if team_data['played'] > 0:
             team_data['btts_pct'] = round((team_data['btts'] / team_data['played']) * 100)
             team_data['over_25_pct'] = round((team_data['over_25'] / team_data['played']) * 100)
