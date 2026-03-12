@@ -1802,7 +1802,9 @@ class MatchPredictionService:
         best_tarjetas = max(tarjetas_pool, key=lambda x: x["prob"])
 
         # --- Apuesta múltiple (solo selecciones con confianza Alta >= 75%) ---
-        all_legs = [best_1x2, best_resultado, best_goles, best_corners, best_tarjetas]
+        # Evitar duplicar mercados equivalentes: usar solo la mejor entre 1X2 y Doble oportunidad.
+        result_leg = best_1x2 if best_1x2["prob"] >= best_resultado["prob"] else best_resultado
+        all_legs = [result_leg, best_goles, best_corners, best_tarjetas]
         legs = sorted([leg for leg in all_legs if leg["prob"] >= 75.0], key=lambda x: x["prob"], reverse=True)
         if not legs:
             combined_pct = 0.0
