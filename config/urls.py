@@ -22,6 +22,7 @@ from django.urls import include, path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('predictor.urls')),
+    path('stats/', include('stats.urls')),
 ]
 
 if settings.DEBUG:
