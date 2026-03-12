@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" role="img" aria-label="SistGoyPro">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5225c7"/>
+      <stop offset="60%" stop-color="#0f6ea8"/>
+      <stop offset="100%" stop-color="#12b1d9"/>
+    </linearGradient>
+    <linearGradient id="tx" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6ce3a3"/>
+      <stop offset="100%" stop-color="#f6cf55"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="8" width="108" height="104" rx="26" fill="url(#bg)"/>
+  <path d="M36 34h44v10H52v10h24v10H52v22H36z" fill="#ffffff" opacity="0.95"/>
+  <circle cx="82" cy="80" r="16" fill="none" stroke="#c9efff" stroke-width="3" opacity="0.9"/>
+  <text x="130" y="75" font-family="Barlow Condensed, Segoe UI, Arial" font-weight="700" font-size="48" fill="url(#tx)">SistGoyPro</text>
+</svg>
