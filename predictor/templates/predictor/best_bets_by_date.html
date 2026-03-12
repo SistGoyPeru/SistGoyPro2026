@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SistGoyPro | Encuentros de mayo</title>
+    <title>SistGoyPro | Mejores apuestas por ventana</title>
     <link rel="icon" type="image/jpeg" href="{% static 'predictor/brand/logo.jpg' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -115,6 +115,37 @@
         .entries {
             display: grid;
             gap: 14px;
+        }
+
+        .date-group {
+            display: grid;
+            gap: 12px;
+        }
+
+        .date-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(246, 207, 85, 0.3);
+            background: rgba(246, 207, 85, 0.1);
+        }
+
+        .date-title {
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .date-count {
+            font-size: 0.88rem;
+            color: #f2e6b2;
+            font-weight: 700;
         }
 
         .entry-card {
@@ -319,10 +350,11 @@
                 <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoyPro">
                 <div>
                     <h1>Mejores apuestas por fecha</h1>
-                    <p class="sub">Todos los encuentros pendientes de {{ target_month_name }} {{ target_year }}, ordenados de mayor a menor por probabilidad combinada.</p>
+                    <p class="sub">Encuentros de la proxima fecha disponible y 1 dia mas ({{ window_label }}), ordenados primero por fecha y luego por probabilidad combinada.</p>
                 </div>
             </div>
             <a class="link-back" href="/">Volver al dashboard</a>
+            <a class="link-back" href="{% url 'best_bets_pdf' %}" style="background: rgba(108, 227, 163, 0.12); border-color: rgba(108, 227, 163, 0.35); color: #6ce3a3;">📥 Descargar PDF</a>
         </section>
 
         <section class="refresh-log">
@@ -331,60 +363,69 @@
             {% endfor %}
         </section>
 
-        {% if best_entries %}
+        {% if date_groups %}
             <section class="entries">
-                {% for item in best_entries %}
-                    <article class="entry-card">
-                        <div class="entry-top">
-                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                                <div class="rank-badge">#{{ forloop.counter }}</div>
-                                <div class="date-badge">{{ item.date_label }} | {{ item.kickoff }}</div>
-                            </div>
-                            <div class="league-chip">
-                                <img src="{{ item.league_logo_url }}" alt="{{ item.league_name }}">
-                                <span>{{ item.league_name }}</span>
-                            </div>
+                {% for group in date_groups %}
+                    <section class="date-group">
+                        <div class="date-header">
+                            <span class="date-title">Fecha: {{ group.date_label }}</span>
+                            <span class="date-count">{{ group.items|length }} encuentros</span>
                         </div>
 
-                        <div class="teams">
-                            <div class="team">
-                                {% if item.home_logo %}<img src="{{ item.home_logo }}" alt="{{ item.home_team }}">{% endif %}
-                                <span>{{ item.home_team }}</span>
-                            </div>
-                            <span class="vs">vs</span>
-                            <div class="team">
-                                {% if item.away_logo %}<img src="{{ item.away_logo }}" alt="{{ item.away_team }}">{% endif %}
-                                <span>{{ item.away_team }}</span>
-                            </div>
-                        </div>
-
-                        <div class="multiple-ticket">
-                            <div class="multi-header">
-                                <span class="multi-icon">🅃</span>
-                                <span class="multi-title">Apuesta múltiple — Solo selecciones Alta confianza</span>
-                                <span class="multi-conf-badge">{{ item.multiple_confidence }}</span>
-                            </div>
-                            {% if item.multiple_legs %}
-                                <ul class="multi-legs">
-                                    {% for leg in item.multiple_legs %}
-                                        <li>{{ leg }}</li>
-                                    {% endfor %}
-                                </ul>
-                                <div class="multi-footer">
-                                    <span>Probabilidad combinada:</span>
-                                    <strong class="multi-prob">{{ item.multiple_combined_probability_text }}%</strong>
+                        {% for item in group.items %}
+                            <article class="entry-card">
+                                <div class="entry-top">
+                                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                        <div class="rank-badge">#{{ forloop.counter }}</div>
+                                        <div class="date-badge">{{ item.kickoff }}</div>
+                                    </div>
+                                    <div class="league-chip">
+                                        <img src="{{ item.league_logo_url }}" alt="{{ item.league_name }}">
+                                        <span>{{ item.league_name }}</span>
+                                    </div>
                                 </div>
-                            {% else %}
-                                <p style="opacity:0.75;font-size:0.9rem;margin:8px 0 0">Sin selecciones de alta confianza para combinar en este encuentro.</p>
-                            {% endif %}
-                        </div>
 
-                        <a class="cta" href="{{ item.dashboard_url }}">Abrir encuentro</a>
-                    </article>
+                                <div class="teams">
+                                    <div class="team">
+                                        {% if item.home_logo %}<img src="{{ item.home_logo }}" alt="{{ item.home_team }}">{% endif %}
+                                        <span>{{ item.home_team }}</span>
+                                    </div>
+                                    <span class="vs">vs</span>
+                                    <div class="team">
+                                        {% if item.away_logo %}<img src="{{ item.away_logo }}" alt="{{ item.away_team }}">{% endif %}
+                                        <span>{{ item.away_team }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="multiple-ticket">
+                                    <div class="multi-header">
+                                        <span class="multi-icon">🅃</span>
+                                        <span class="multi-title">Apuesta múltiple — Solo selecciones Alta confianza</span>
+                                        <span class="multi-conf-badge">{{ item.multiple_confidence }}</span>
+                                    </div>
+                                    {% if item.multiple_legs %}
+                                        <ul class="multi-legs">
+                                            {% for leg in item.multiple_legs %}
+                                                <li>{{ leg }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                        <div class="multi-footer">
+                                            <span>Probabilidad combinada:</span>
+                                            <strong class="multi-prob">{{ item.multiple_combined_probability_text }}%</strong>
+                                        </div>
+                                    {% else %}
+                                        <p style="opacity:0.75;font-size:0.9rem;margin:8px 0 0">Sin selecciones de alta confianza para combinar en este encuentro.</p>
+                                    {% endif %}
+                                </div>
+
+                                <a class="cta" href="{{ item.dashboard_url }}">Abrir encuentro</a>
+                            </article>
+                        {% endfor %}
+                    </section>
                 {% endfor %}
             </section>
         {% else %}
-            <div class="empty">No hay encuentros pendientes de {{ target_month_name }} {{ target_year }} o no fue posible calcular recomendaciones.</div>
+            <div class="empty">No hay encuentros para la ventana {{ window_label }} o no fue posible calcular recomendaciones.</div>
         {% endif %}
     </div>
 </body>
