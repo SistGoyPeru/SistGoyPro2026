@@ -7,12 +7,21 @@ from .engine import (
 	get_prediction_service_seriea,
 	get_prediction_service_ligue1,
 )
+from .sync import refresh_fixture_links
 
 
 def dashboard(request):
 	liga = request.GET.get("liga") or request.POST.get("liga", "spain")
 	if liga not in ("spain", "bundesliga", "premier", "seriea", "ligue1"):
 		liga = "spain"
+
+	refresh_status = ""
+	if request.method == "GET":
+		try:
+			updated_rows = refresh_fixture_links(liga)
+			refresh_status = f"Enlaces actualizados y guardados en base de datos: {updated_rows} encuentros."
+		except Exception as exc:
+			refresh_status = f"No se pudo refrescar enlaces en este acceso: {exc}"
 
 	if liga == "bundesliga":
 		service = get_prediction_service_bundesliga()
@@ -51,5 +60,6 @@ def dashboard(request):
 		"validation_accuracy": round(service.validation_accuracy * 100, 2),
 		"model_scores": service.model_scores,
 		"error_message": error_message,
+		"refresh_status": refresh_status,
 	}
 	return render(request, "predictor/dashboard.html", context)

@@ -310,6 +310,16 @@
             color: #d8ebe1;
         }
 
+        .sync-note {
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: rgba(108, 227, 163, 0.10);
+            border: 1px solid rgba(108, 227, 163, 0.30);
+            color: #bdeed2;
+            font-size: 0.9rem;
+        }
+
         .row strong {
             color: #ffffff;
         }
@@ -778,6 +788,10 @@
                     <p class="empty">{{ error_message }}</p>
                 {% endif %}
 
+                {% if refresh_status %}
+                    <p class="sync-note">{{ refresh_status }}</p>
+                {% endif %}
+
                 <div class="dataset-list">
                     <div class="row"><span>Histórico de entrenamiento</span><strong>{{ datasets.historico }}</strong></div>
                     <div class="row"><span>Calendario de encuentros</span><strong>{{ datasets.encuentros }}</strong></div>
@@ -835,6 +849,95 @@
                     <div class="fixture-meta">{{ prediction.fixture.jornada }} | {{ prediction.fixture.fecha }} | {{ prediction.fixture.hora }}</div>
 
                     <div class="prediction-badge">Pronóstico principal: {{ prediction.outcome }}</div>
+
+                    <section class="report-block" style="margin-top:16px">
+                        <h3 class="report-title">Apuestas por categoría</h3>
+
+                        <div class="bet-cat-grid">
+                            {% with b=prediction.categorized_bets.resultado_1x2 %}
+                            <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
+                                <div class="cat-label">&#127942; Resultado (1X2)</div>
+                                <div class="cat-market">{{ b.market }}</div>
+                                <div class="cat-pick">{{ b.pick }}</div>
+                                <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
+                                    {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
+                                </div>
+                            </div>
+                            {% endwith %}
+
+                            {% with b=prediction.categorized_bets.doble_oportunidad %}
+                            <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
+                                <div class="cat-label">&#127922; Doble oportunidad</div>
+                                <div class="cat-market">{{ b.market }}</div>
+                                <div class="cat-pick">{{ b.pick }}</div>
+                                <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
+                                    {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
+                                </div>
+                            </div>
+                            {% endwith %}
+
+                            {% with b=prediction.categorized_bets.goles %}
+                            <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
+                                <div class="cat-label">&#9917; Goles</div>
+                                <div class="cat-market">{{ b.market }}</div>
+                                <div class="cat-pick">{{ b.pick }}</div>
+                                <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
+                                    {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
+                                </div>
+                            </div>
+                            {% endwith %}
+
+                            {% with b=prediction.categorized_bets.corners %}
+                            <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
+                                <div class="cat-label">&#128204; Córners</div>
+                                <div class="cat-market">{{ b.market }}</div>
+                                <div class="cat-pick">{{ b.pick }}</div>
+                                <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
+                                    {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
+                                </div>
+                            </div>
+                            {% endwith %}
+
+                            {% with b=prediction.categorized_bets.tarjetas %}
+                            <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
+                                <div class="cat-label">&#127183; Tarjetas</div>
+                                <div class="cat-market">{{ b.market }}</div>
+                                <div class="cat-pick">{{ b.pick }}</div>
+                                <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
+                                    {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
+                                </div>
+                            </div>
+                            {% endwith %}
+                        </div>
+
+                        {% with m=prediction.categorized_bets.multiple %}
+                        <div class="multiple-ticket {% if m.confidence == 'Alta' %}multi-alta{% elif m.confidence == 'Media' %}multi-media{% else %}multi-baja{% endif %}">
+                            <div class="multi-header">
+                                <span class="multi-icon">&#127299;</span>
+                                <span class="multi-title">Apuesta múltiple — Solo selecciones Alta confianza</span>
+                                <span class="multi-conf-badge {% if m.confidence == 'Alta' %}badge-alta{% elif m.confidence == 'Media' %}badge-media{% else %}badge-baja{% endif %}">{{ m.confidence }}</span>
+                            </div>
+                            {% if m.legs %}
+                                <ul class="multi-legs">
+                                    {% for leg in m.legs %}
+                                        <li>{{ leg }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="multi-footer">
+                                    <span>Probabilidad combinada:</span>
+                                    <strong class="multi-prob {% if m.confidence == 'Alta' %}prob-alta{% elif m.confidence == 'Media' %}prob-media{% else %}prob-baja{% endif %}">{{ m.prob_combinada }}%</strong>
+                                </div>
+                            {% else %}
+                                <p style="opacity:0.6;font-size:0.88rem;margin:8px 0 0">Ninguna selección supera el 75% de confianza en este partido.</p>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                    </section>
 
                     <div class="prob-grid">
                         <div class="prob-card">
@@ -1003,133 +1106,7 @@
             </article>
         </section>
 
-        {% if prediction %}
-        <section class="bottom-summary">
-            <article class="panel report-panel">
-                <section class="report-block" style="margin-top:0">
-                    <h3 class="report-title">Apuestas por categoría</h3>
 
-                    <!-- 5 tarjetas de categoría -->
-                    <div class="bet-cat-grid">
-
-                        {% with b=prediction.categorized_bets.resultado_1x2 %}
-                        <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
-                            <div class="cat-label">&#127942; Resultado (1X2)</div>
-                            <div class="cat-market">{{ b.market }}</div>
-                            <div class="cat-pick">{{ b.pick }}</div>
-                            <div class="cat-prob">{{ b.prob }}%</div>
-                            <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
-                                {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
-                            </div>
-                        </div>
-                        {% endwith %}
-
-                        {% with b=prediction.categorized_bets.doble_oportunidad %}
-                        <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
-                            <div class="cat-label">&#127922; Doble oportunidad</div>
-                            <div class="cat-market">{{ b.market }}</div>
-                            <div class="cat-pick">{{ b.pick }}</div>
-                            <div class="cat-prob">{{ b.prob }}%</div>
-                            <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
-                                {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
-                            </div>
-                        </div>
-                        {% endwith %}
-
-                        {% with b=prediction.categorized_bets.goles %}
-                        <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
-                            <div class="cat-label">&#9917; Goles</div>
-                            <div class="cat-market">{{ b.market }}</div>
-                            <div class="cat-pick">{{ b.pick }}</div>
-                            <div class="cat-prob">{{ b.prob }}%</div>
-                            <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
-                                {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
-                            </div>
-                        </div>
-                        {% endwith %}
-
-                        {% with b=prediction.categorized_bets.corners %}
-                        <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
-                            <div class="cat-label">&#128204; Córners</div>
-                            <div class="cat-market">{{ b.market }}</div>
-                            <div class="cat-pick">{{ b.pick }}</div>
-                            <div class="cat-prob">{{ b.prob }}%</div>
-                            <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
-                                {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
-                            </div>
-                        </div>
-                        {% endwith %}
-
-                        {% with b=prediction.categorized_bets.tarjetas %}
-                        <div class="bet-cat-card {% if b.prob >= 75 %}cat-alta{% elif b.prob >= 62 %}cat-media{% else %}cat-baja{% endif %}">
-                            <div class="cat-label">&#127183; Tarjetas</div>
-                            <div class="cat-market">{{ b.market }}</div>
-                            <div class="cat-pick">{{ b.pick }}</div>
-                            <div class="cat-prob">{{ b.prob }}%</div>
-                            <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
-                                {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
-                            </div>
-                        </div>
-                        {% endwith %}
-
-                    </div><!-- /bet-cat-grid -->
-
-                    <!-- Apuesta múltiple combinada -->
-                    {% with m=prediction.categorized_bets.multiple %}
-                    <div class="multiple-ticket {% if m.confidence == 'Alta' %}multi-alta{% elif m.confidence == 'Media' %}multi-media{% else %}multi-baja{% endif %}">
-                        <div class="multi-header">
-                            <span class="multi-icon">&#127299;</span>
-                            <span class="multi-title">Apuesta múltiple — Solo selecciones Alta confianza</span>
-                            <span class="multi-conf-badge {% if m.confidence == 'Alta' %}badge-alta{% elif m.confidence == 'Media' %}badge-media{% else %}badge-baja{% endif %}">{{ m.confidence }}</span>
-                        </div>
-                        {% if m.legs %}
-                            <ul class="multi-legs">
-                                {% for leg in m.legs %}
-                                    <li>{{ leg }}</li>
-                                {% endfor %}
-                            </ul>
-                            <div class="multi-footer">
-                                <span>Probabilidad combinada:</span>
-                                <strong class="multi-prob {% if m.confidence == 'Alta' %}prob-alta{% elif m.confidence == 'Media' %}prob-media{% else %}prob-baja{% endif %}">{{ m.prob_combinada }}%</strong>
-                            </div>
-                        {% else %}
-                            <p style="opacity:0.6;font-size:0.88rem;margin:8px 0 0">Ninguna selección supera el 75% de confianza en este partido.</p>
-                        {% endif %}
-                    </div>
-                    {% endwith %}
-
-                    <!-- Contexto: jugadores + clima -->
-                    <div class="two-col" style="margin-top:16px">
-                        <div class="stat-card">
-                            <span>Estado jugadores
-                                {% if prediction.match_report.factors.players.source %}
-                                    &nbsp;<em style="font-size:0.75em;opacity:0.65;font-weight:normal">{{ prediction.match_report.factors.players.source }}</em>
-                                {% endif %}
-                            </span>
-                            <strong>{{ prediction.match_report.factors.players.status }}</strong>
-                            <span>{{ prediction.match_report.factors.players.note }}</span>
-                            {% if prediction.match_report.factors.players.items %}
-                                {% for item in prediction.match_report.factors.players.items|slice:":6" %}
-                                    <span>{{ item.team }} | {{ item.player }} | {{ item.reason }}</span>
-                                {% endfor %}
-                            {% endif %}
-                        </div>
-                        <div class="stat-card">
-                            <span>Clima y franja</span>
-                            <strong>{{ prediction.match_report.factors.kickoff_period }}</strong>
-                            {% if prediction.match_report.factors.weather.status == "Disponible" %}
-                                <span>{{ prediction.match_report.factors.weather.temperature }} °C | Lluvia {{ prediction.match_report.factors.weather.rain_probability }}% | Viento {{ prediction.match_report.factors.weather.wind_speed }} km/h</span>
-                            {% else %}
-                                <span>{{ prediction.match_report.factors.weather.reason }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <p class="note">{{ prediction.match_report.recommended_bet.note }} {{ prediction.match_report.disclaimer }}</p>
-                </section>
-            </article>
-        </section>
-        {% endif %}
     </div>
 <script>
 (function () {
