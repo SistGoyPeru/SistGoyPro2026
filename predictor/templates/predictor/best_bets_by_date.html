@@ -229,8 +229,28 @@
             border-radius: 14px;
             padding: 14px 16px;
             margin-bottom: 10px;
-            border: 1px solid rgba(108, 227, 163, 0.35);
+            border: 1px solid rgba(255,255,255,0.13);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .multiple-ticket:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .multiple-ticket.multi-alta {
             background: linear-gradient(145deg, rgba(20, 70, 44, 0.92), rgba(8, 40, 24, 0.95));
+            border-color: rgba(108,227,163,0.4);
+        }
+
+        .multiple-ticket.multi-media {
+            background: linear-gradient(145deg, rgba(55,47,10,0.92), rgba(28,24,4,0.95));
+            border-color: rgba(246,207,85,0.4);
+        }
+
+        .multiple-ticket.multi-baja {
+            background: linear-gradient(145deg, rgba(60,24,8,0.92),  rgba(28,10,4,0.95));
+            border-color: rgba(242,139,90,0.4);
         }
 
         .multi-header {
@@ -260,9 +280,6 @@
             padding: 2px 8px;
             font-size: 0.9rem;
             font-weight: 700;
-            border: 1px solid rgba(108, 227, 163, 0.45);
-            color: #9cf0c4;
-            background: rgba(108, 227, 163, 0.16);
         }
 
         .multi-legs {
@@ -294,9 +311,15 @@
             font-size: 1.8rem;
             line-height: 1;
             font-weight: 700;
-            color: #6ce3a3;
             font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
         }
+
+        .badge-alta { background: rgba(108,227,163,0.18); color: #6ce3a3; }
+        .badge-media { background: rgba(246,207,85,0.18); color: #f6cf55; }
+        .badge-baja { background: rgba(242,139,90,0.18); color: #f28b5a; }
+        .prob-alta { color: #6ce3a3; }
+        .prob-media { color: #f6cf55; }
+        .prob-baja { color: #f28b5a; }
 
         .cta {
             display: inline-block;
@@ -397,11 +420,11 @@
                                     </div>
                                 </div>
 
-                                <div class="multiple-ticket">
+                                <div class="multiple-ticket {% if item.multiple_confidence == 'Alta' %}multi-alta{% elif item.multiple_confidence == 'Media' %}multi-media{% else %}multi-baja{% endif %}">
                                     <div class="multi-header">
                                         <span class="multi-icon">🅃</span>
                                         <span class="multi-title">Apuesta múltiple — Solo selecciones Alta confianza</span>
-                                        <span class="multi-conf-badge">{{ item.multiple_confidence }}</span>
+                                        <span class="multi-conf-badge {% if item.multiple_confidence == 'Alta' %}badge-alta{% elif item.multiple_confidence == 'Media' %}badge-media{% else %}badge-baja{% endif %}">{{ item.multiple_confidence }}</span>
                                     </div>
                                     {% if item.multiple_legs %}
                                         <ul class="multi-legs">
@@ -411,10 +434,10 @@
                                         </ul>
                                         <div class="multi-footer">
                                             <span>Probabilidad combinada:</span>
-                                            <strong class="multi-prob">{{ item.multiple_combined_probability_text }}%</strong>
+                                            <strong class="multi-prob {% if item.multiple_confidence == 'Alta' %}prob-alta{% elif item.multiple_confidence == 'Media' %}prob-media{% else %}prob-baja{% endif %}">{{ item.multiple_combined_probability_text }}%</strong>
                                         </div>
                                     {% else %}
-                                        <p style="opacity:0.75;font-size:0.9rem;margin:8px 0 0">Sin selecciones de alta confianza para combinar en este encuentro.</p>
+                                        <p style="opacity:0.6;font-size:0.88rem;margin:8px 0 0">Ninguna selección supera el 75% de confianza en este partido.</p>
                                     {% endif %}
                                 </div>
 
