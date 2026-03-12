@@ -18,14 +18,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fkfoll9fqe6qv)38#*y$7w50-v
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() in {'1', 'true', 'yes', 'on'}
 
-default_hosts = ['127.0.0.1', 'localhost', 'testserver', '.railway.app']
+default_hosts = ['127.0.0.1', 'localhost', 'testserver', '.railway.app', 'sistgoypro2026.up.railway.app']
 extra_hosts = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host.strip()]
 railway_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN', '').strip()
 if railway_domain:
     extra_hosts.append(railway_domain)
 ALLOWED_HOSTS = default_hosts + extra_hosts
 
-CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = ['https://sistgoypro2026.up.railway.app'] + [
     origin.strip()
     for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
     if origin.strip()
