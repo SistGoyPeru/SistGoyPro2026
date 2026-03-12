@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import csv
-import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from urllib.parse import urljoin
@@ -11,18 +9,9 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 
-SOURCE_URL = "https://www.livefutbol.com/competition/co97/espana-primera-division/all-matches/"
+SOURCE_URL = "https://www.livefutbol.com/competition/co37/paises-bajos-eredivisie/all-matches/"
 BASE_URL = "https://www.livefutbol.com"
-OUTPUT_FILE = Path(__file__).resolve().parent / "liga1_españa_encuentros.csv"
-EXTRA_SCRIPTS = [
-    "actualizar_encuentros_bundesliga.py",
-    "actualizar_encuentros_premierleague.py",
-    "actualizar_encuentros_seriea.py",
-    "actualizar_encuentros_ligue1.py",
-    "actualizar_encuentros_primeiraliga.py",
-    "actualizar_encuentros_proleague.py",
-    "actualizar_encuentros_eredivisie.py",
-]
+OUTPUT_FILE = Path(__file__).resolve().parent / "eredivisie_holanda_encuentros.csv"
 FIELDNAMES = [
     "competicion",
     "jornada",
@@ -34,6 +23,31 @@ FIELDNAMES = [
     "estado",
     "enlace_partido",
 ]
+
+TEAM_NAME_MAP = {
+    "Ajax":               "AFC Ajax",
+    "AZ Alkmaar":         "AZ Alkmaar",
+    "Excelsior":          "SBV Excelsior",
+    "Feyenoord":          "Feyenoord",
+    "For Sittard":        "Fortuna Sittard",
+    "Go Ahead Eagles":    "Go Ahead Eagles",
+    "Groningen":          "FC Groningen",
+    "Heerenveen":         "Sc Heerenveen",
+    "Heracles":           "Heracles Almelo",
+    "NAC Breda":          "NAC Breda",
+    "Nijmegen":           "NEC Nijmegen",
+    "PSV Eindhoven":      "PSV Eindhoven",
+    "Sparta Rotterdam":   "Sparta Rotterdam",
+    "Telstar":            "Telstar",
+    "Twente":             "FC Twente",
+    "Utrecht":            "FC Utrecht",
+    "Volendam":           "FC Volendam",
+    "Zwolle":             "PEC Zwolle",
+}
+
+
+def normalize_team_name(name: str) -> str:
+    return TEAM_NAME_MAP.get(name, name)
 
 
 def download_page() -> str:
@@ -91,12 +105,12 @@ def extract_matches(html: str) -> list[dict[str, str]]:
 
         matches.append(
             {
-                "competicion": "Liga 1 España",
+                "competicion": "Eredivisie Holanda",
                 "jornada": current_round,
                 "fecha": current_date,
                 "hora": get_text(child, ".match-time"),
-                "local": get_text(child, ".team-name-home"),
-                "visitante": get_text(child, ".team-name-away"),
+                "local": normalize_team_name(get_text(child, ".team-name-home")),
+                "visitante": normalize_team_name(get_text(child, ".team-name-away")),
                 "resultado": get_text(child, ".match-result"),
                 "estado": get_text(child, ".match-status"),
                 "enlace_partido": get_match_link(child),
@@ -124,41 +138,12 @@ def write_csv(rows: list[dict[str, str]]) -> None:
     temp_path.replace(OUTPUT_FILE)
 
 
-def update_spain_fixtures() -> None:
+def main() -> None:
     html = download_page()
     rows = extract_matches(html)
     write_csv(rows)
     print(f"Archivo actualizado: {OUTPUT_FILE}")
-    print(f"Encuentros procesados: {len(rows)}")
-
-
-def run_extra_scripts() -> None:
-    base_dir = OUTPUT_FILE.parent
-    failures: list[str] = []
-    for script_name in EXTRA_SCRIPTS:
-        script_path = base_dir / script_name
-        if not script_path.exists():
-            print(f"[WARN] Script no encontrado: {script_name}")
-            failures.append(script_name)
-            continue
-
-        print(f"\n==> Ejecutando {script_name}")
-        result = subprocess.run([sys.executable, str(script_path)], cwd=base_dir)
-        if result.returncode != 0:
-            print(f"[ERROR] Fallo al ejecutar {script_name} (codigo {result.returncode})")
-            failures.append(script_name)
-
-    if failures:
-        raise RuntimeError(
-            "No se pudieron completar todos los encuentros. Fallaron: " + ", ".join(failures)
-        )
-
-
-def main() -> None:
-    print("==> Ejecutando actualizar_encuentros.py (España)")
-    update_spain_fixtures()
-    run_extra_scripts()
-    print("\nActualizacion global de encuentros finalizada.")
+    print(f"Partidos procesados: {len(rows)}")
 
 
 if __name__ == "__main__":

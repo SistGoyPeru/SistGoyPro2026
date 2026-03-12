@@ -16,6 +16,9 @@ from .engine import (
 	get_prediction_service_premier,
 	get_prediction_service_seriea,
 	get_prediction_service_ligue1,
+	get_prediction_service_primeiraliga,
+	get_prediction_service_proleague,
+	get_prediction_service_eredivisie,
 )
 from .sync import refresh_fixture_links
 
@@ -26,6 +29,9 @@ LEAGUE_SERVICE_FACTORIES = {
 	"premier": get_prediction_service_premier,
 	"seriea": get_prediction_service_seriea,
 	"ligue1": get_prediction_service_ligue1,
+	"primeiraliga": get_prediction_service_primeiraliga,
+	"proleague": get_prediction_service_proleague,
+	"eredivisie": get_prediction_service_eredivisie,
 }
 
 
@@ -105,7 +111,7 @@ def _combined_without_cards_corners_probability(legs: list[object]) -> float:
 
 def dashboard(request):
 	liga = request.GET.get("liga") or request.POST.get("liga", "spain")
-	if liga not in ("spain", "bundesliga", "premier", "seriea", "ligue1"):
+	if liga not in ("spain", "bundesliga", "premier", "seriea", "ligue1", "primeiraliga", "proleague", "eredivisie"):
 		liga = "spain"
 
 	refresh_status = ""

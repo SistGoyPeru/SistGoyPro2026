@@ -374,6 +374,219 @@ LIGUE1_CONFIG: dict = {
     "league_name":            "Ligue 1 Francia",
 }
 
+# ── Primeira Liga Portugal ────────────────────────────────────────────────────
+PT_TEAM_COORDS = {
+    "FC Alverca":        (38.9037, -9.0300),
+    "FC Arouca":         (40.9333, -8.2500),
+    "AVS":               (41.3631, -8.7455),
+    "SL Benfica":        (38.7523, -9.1839),
+    "Casa Pia AC":       (38.7290, -9.1583),
+    "GD Estoril":        (38.7075, -9.3967),
+    "Estrela Amadora":   (38.7538, -9.2302),
+    "FC Famalicão":      (41.4000, -8.5167),
+    "Gil Vicente":       (41.5333, -8.3000),
+    "Vitória Guimarães": (41.4500, -8.2833),
+    "Moreirense FC":     (41.4167, -8.3000),
+    "CD Nacional":       (32.6500, -16.9000),
+    "FC Porto":          (41.1620, -8.5834),
+    "Rio Ave FC":        (41.3667, -8.6167),
+    "CD Santa Clara":    (37.7333, -25.6667),
+    "Sporting Braga":    (41.5500, -8.4167),
+    "Sporting CP":       (38.7612, -9.1602),
+    "CD Tondela":        (40.5167, -8.0833),
+}
+PT_TEAM_API_ALIASES = {
+    "FC Famalicão":      "Famalicao",
+    "Vitória Guimarães": "Vitoria Guimaraes",
+    "Sporting CP":       "Sporting CP",
+    "Sporting Braga":    "Braga",
+}
+PT_TEAM_SCRAPE_ALIASES = {
+    "FC Famalicão":      "FC Famalicao",
+    "Vitória Guimarães": "Vitoria SC",
+    "Sporting Braga":    "SC Braga",
+}
+PT_TEAM_TRANSFERMARKT_IDS = {
+    "FC Alverca":        10520,
+    "FC Arouca":         13602,
+    "AVS":               50191,
+    "SL Benfica":        294,
+    "Casa Pia AC":       21530,
+    "GD Estoril":        3080,
+    "Estrela Amadora":   24040,
+    "FC Famalicão":      10296,
+    "Gil Vicente":       4827,
+    "Vitória Guimarães": 2751,
+    "Moreirense FC":     10534,
+    "CD Nacional":       3473,
+    "FC Porto":          720,
+    "Rio Ave FC":        3474,
+    "CD Santa Clara":    15417,
+    "Sporting Braga":    1070,
+    "Sporting CP":       336,
+    "CD Tondela":        13644,
+}
+PT_APIFOOTBALL_LEAGUE_ID = 94
+PRIMEIRALIGA_CONFIG: dict = {
+    "historical_csv":         BASE_DIR / "primeiraliga_portugal.csv",
+    "fixtures_csv":           BASE_DIR / "primeiraliga_portugal_encuentros.csv",
+    "team_coords":            PT_TEAM_COORDS,
+    "team_api_aliases":       PT_TEAM_API_ALIASES,
+    "team_scrape_aliases":    PT_TEAM_SCRAPE_ALIASES,
+    "team_transfermarkt_ids": PT_TEAM_TRANSFERMARKT_IDS,
+    "apifootball_league_id":  PT_APIFOOTBALL_LEAGUE_ID,
+    "league_name":            "Primeira Liga Portugal",
+}
+
+# ── Pro League Bélgica ────────────────────────────────────────────────────────
+BE_TEAM_COORDS = {
+    "RSC Anderlecht":      (50.8359, 4.2978),
+    "Royal Antwerp FC":    (51.2250, 4.4170),
+    "Cercle Brugge":       (51.1978, 3.2183),
+    "Sporting Charleroi":  (50.4051, 4.4435),
+    "Club Brugge KV":      (51.1978, 3.2183),
+    "FCV Dender EH":       (50.9167, 4.0500),
+    "KRC Genk":            (50.9667, 5.5000),
+    "KAA Gent":            (51.0500, 3.7333),
+    "KV Mechelen":         (51.0167, 4.4833),
+    "Oud-Heverlee Leuven": (50.8833, 4.7000),
+    "RAAL La Louviére":    (50.4667, 4.1833),
+    "Sint-Truidense VV":   (50.8167, 5.1833),
+    "Union Saint-Gilloise":(50.8503, 4.3517),
+    "Standard Lieja":      (50.6000, 5.5500),
+    "SV Zulte Waregem":    (50.8833, 3.4333),
+    "KVC Westerlo":        (51.0833, 4.9167),
+}
+BE_TEAM_API_ALIASES = {
+    "RSC Anderlecht":      "Anderlecht",
+    "Royal Antwerp FC":    "Antwerp",
+    "Club Brugge KV":      "Club Brugge",
+    "KRC Genk":            "Genk",
+    "KAA Gent":            "Gent",
+    "Union Saint-Gilloise": "Union Saint Gilloise",
+    "Standard Lieja":      "Standard Liege",
+    "SV Zulte Waregem":    "Zulte Waregem",
+}
+BE_TEAM_SCRAPE_ALIASES = {
+    "RSC Anderlecht":      "Anderlecht",
+    "Royal Antwerp FC":    "Antwerp",
+    "Club Brugge KV":      "Club Brugge",
+    "KRC Genk":            "Genk",
+    "KAA Gent":            "Gent",
+    "RAAL La Louviére":    "RAAL La Louviere",
+    "Sint-Truidense VV":   "Saint-Trond",
+    "Union Saint-Gilloise": "Union SG",
+    "Standard Lieja":      "Standard",
+    "SV Zulte Waregem":    "Zulte-Waregem",
+}
+BE_TEAM_TRANSFERMARKT_IDS = {
+    "RSC Anderlecht":      59,
+    "Royal Antwerp FC":    749,
+    "Cercle Brugge":       1437,
+    "Sporting Charleroi":  276,
+    "Club Brugge KV":      2282,
+    "FCV Dender EH":       10453,
+    "KRC Genk":            3304,
+    "KAA Gent":            2566,
+    "KV Mechelen":         6006,
+    "Oud-Heverlee Leuven": 24064,
+    "RAAL La Louviére":    4618,
+    "Sint-Truidense VV":   3297,
+    "Union Saint-Gilloise": 8239,
+    "Standard Lieja":      276,
+    "SV Zulte Waregem":    2473,
+    "KVC Westerlo":        5696,
+}
+BE_APIFOOTBALL_LEAGUE_ID = 144
+PROLEAGUE_CONFIG: dict = {
+    "historical_csv":         BASE_DIR / "proleague_belgica.csv",
+    "fixtures_csv":           BASE_DIR / "proleague_belgica_encuentros.csv",
+    "team_coords":            BE_TEAM_COORDS,
+    "team_api_aliases":       BE_TEAM_API_ALIASES,
+    "team_scrape_aliases":    BE_TEAM_SCRAPE_ALIASES,
+    "team_transfermarkt_ids": BE_TEAM_TRANSFERMARKT_IDS,
+    "apifootball_league_id":  BE_APIFOOTBALL_LEAGUE_ID,
+    "league_name":            "Pro League Bélgica",
+}
+
+# ── Eredivisie Holanda ───────────────────────────────────────────────────────
+NL_TEAM_COORDS = {
+    "AFC Ajax":          (52.3144, 4.9414),
+    "AZ Alkmaar":        (52.6317, 4.7486),
+    "SBV Excelsior":     (51.9194, 4.5239),
+    "Feyenoord":         (51.8939, 4.5231),
+    "Fortuna Sittard":   (50.9983, 5.8694),
+    "Go Ahead Eagles":   (52.2550, 6.1639),
+    "FC Groningen":      (53.2194, 6.5665),
+    "Sc Heerenveen":     (52.9600, 5.9200),
+    "Heracles Almelo":   (52.3567, 6.6625),
+    "NAC Breda":         (51.5719, 4.7683),
+    "NEC Nijmegen":      (51.8425, 5.8528),
+    "PSV Eindhoven":     (51.4416, 5.4697),
+    "Sparta Rotterdam":  (51.9225, 4.4792),
+    "Telstar":           (52.4625, 4.6211),
+    "FC Twente":         (52.2215, 6.8937),
+    "FC Utrecht":        (52.0907, 5.1214),
+    "FC Volendam":       (52.4950, 5.0708),
+    "PEC Zwolle":        (52.5168, 6.0830),
+}
+NL_TEAM_API_ALIASES = {
+    "AFC Ajax":         "Ajax",
+    "SBV Excelsior":    "Excelsior",
+    "Fortuna Sittard":  "Fortuna Sittard",
+    "FC Groningen":     "Groningen",
+    "Sc Heerenveen":    "Heerenveen",
+    "Heracles Almelo":  "Heracles",
+    "NEC Nijmegen":     "Nijmegen",
+    "FC Twente":        "Twente",
+    "FC Utrecht":       "Utrecht",
+    "FC Volendam":      "Volendam",
+    "PEC Zwolle":       "Zwolle",
+}
+NL_TEAM_SCRAPE_ALIASES = {
+    "AFC Ajax":         "Ajax",
+    "SBV Excelsior":    "Excelsior",
+    "FC Groningen":     "Groningen",
+    "Sc Heerenveen":    "Heerenveen",
+    "Heracles Almelo":  "Heracles",
+    "NEC Nijmegen":     "NEC",
+    "FC Twente":        "Twente",
+    "FC Utrecht":       "Utrecht",
+    "FC Volendam":      "Volendam",
+    "PEC Zwolle":       "Zwolle",
+}
+NL_TEAM_TRANSFERMARKT_IDS = {
+    "AFC Ajax":         610,
+    "AZ Alkmaar":       1090,
+    "SBV Excelsior":    798,
+    "Feyenoord":        234,
+    "Fortuna Sittard":  385,
+    "Go Ahead Eagles":  1435,
+    "FC Groningen":     202,
+    "Sc Heerenveen":    306,
+    "Heracles Almelo":  1304,
+    "NAC Breda":        132,
+    "NEC Nijmegen":     467,
+    "PSV Eindhoven":    383,
+    "Sparta Rotterdam": 468,
+    "Telstar":          1573,
+    "FC Twente":        317,
+    "FC Utrecht":       481,
+    "FC Volendam":      1128,
+    "PEC Zwolle":       3839,
+}
+NL_APIFOOTBALL_LEAGUE_ID = 88
+EREDIVISIE_CONFIG: dict = {
+    "historical_csv":         BASE_DIR / "eredivisie_holanda.csv",
+    "fixtures_csv":           BASE_DIR / "eredivisie_holanda_encuentros.csv",
+    "team_coords":            NL_TEAM_COORDS,
+    "team_api_aliases":       NL_TEAM_API_ALIASES,
+    "team_scrape_aliases":    NL_TEAM_SCRAPE_ALIASES,
+    "team_transfermarkt_ids": NL_TEAM_TRANSFERMARKT_IDS,
+    "apifootball_league_id":  NL_APIFOOTBALL_LEAGUE_ID,
+    "league_name":            "Eredivisie Holanda",
+}
+
 
 def _read_env_value(key: str) -> str:
     if not ENV_FILE.exists():
@@ -2139,6 +2352,21 @@ def get_prediction_service_seriea() -> MatchPredictionService:
 @lru_cache(maxsize=1)
 def get_prediction_service_ligue1() -> MatchPredictionService:
     return MatchPredictionService(LIGUE1_CONFIG)
+
+
+@lru_cache(maxsize=1)
+def get_prediction_service_primeiraliga() -> MatchPredictionService:
+    return MatchPredictionService(PRIMEIRALIGA_CONFIG)
+
+
+@lru_cache(maxsize=1)
+def get_prediction_service_proleague() -> MatchPredictionService:
+    return MatchPredictionService(PROLEAGUE_CONFIG)
+
+
+@lru_cache(maxsize=1)
+def get_prediction_service_eredivisie() -> MatchPredictionService:
+    return MatchPredictionService(EREDIVISIE_CONFIG)
 
 
 # Alias para compatibilidad
