@@ -1,0 +1,450 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SistGoyPro | Mejores apuestas</title>
+    <link rel="icon" type="image/jpeg" href="{% static 'predictor/brand/logo.jpg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-top: #0a1f1a;
+            --bg-mid: #0d2b22;
+            --bg-bottom: #051410;
+            --accent: #ffc107;
+            --accent-dark: #ff9800;
+            --text-main: #ecf0f1;
+            --text-muted: #95a8a1;
+            --card-bg: rgba(20, 35, 30, 0.6);
+            --card-border: rgba(255, 193, 7, 0.1);
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Source Sans 3", sans-serif;
+            background: linear-gradient(135deg, var(--bg-top) 0%, var(--bg-mid) 50%, var(--bg-bottom) 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .shell {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(30, 50, 45, 0.5), rgba(20, 35, 30, 0.5));
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            object-fit: cover;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-text h1 {
+            font-family: "Barlow Condensed", sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .header-text p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .header-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #1a1a1a;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+        }
+
+        .header-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 193, 7, 0.3);
+        }
+
+        .refresh-status {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .status-item {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05));
+            border-left: 4px solid var(--success);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+
+        .entries {
+            display: grid;
+            gap: 20px;
+        }
+
+        .entry-card {
+            background: linear-gradient(135deg, var(--card-bg), rgba(20, 35, 30, 0.4));
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .entry-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-dark), transparent);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .entry-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 193, 7, 0.3);
+            box-shadow: 0 8px 20px rgba(255, 193, 7, 0.15);
+        }
+
+        .entry-header {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 193, 7, 0.1);
+        }
+
+        .date-badge {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #1a1a1a;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .league-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 193, 7, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+
+        .league-info img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
+
+        .match-teams {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .team {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: rgba(20, 35, 30, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 193, 7, 0.1);
+            flex: 1;
+            min-width: 0;
+        }
+
+        .team img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+
+        .team span {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .vs-separator {
+            font-size: 0.7rem;
+            color: var(--accent);
+            font-weight: 700;
+            padding: 0 4px;
+        }
+
+        .bet-recommendation {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(156, 39, 176, 0.1));
+            border: 1px solid rgba(255, 193, 7, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .stat-box {
+            background: rgba(20, 35, 30, 0.6);
+            border: 1px solid rgba(255, 193, 7, 0.15);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .stat-value {
+            color: var(--text-main);
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: "Barlow Condensed", sans-serif;
+        }
+
+        .stat-value.high {
+            color: var(--success);
+        }
+
+        .stat-value.medium {
+            color: var(--warning);
+        }
+
+        .stat-value.low {
+            color: var(--danger);
+        }
+
+        .action-button {
+            display: inline-block;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #1a1a1a;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 193, 7, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.05), rgba(244, 67, 54, 0.02));
+            border: 2px dashed rgba(244, 67, 54, 0.2);
+            border-radius: 16px;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .shell {
+                padding: 20px 16px;
+            }
+
+            .header {
+                padding: 16px;
+                margin-bottom: 24px;
+            }
+
+            .header-text h1 {
+                font-size: 1.6rem;
+            }
+
+            .entry-header {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .header-link {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .shell {
+                padding: 16px 12px;
+            }
+
+            .header {
+                padding: 12px;
+                margin-bottom: 20px;
+            }
+
+            .header-text h1 {
+                font-size: 1.3rem;
+            }
+
+            .header-content {
+                gap: 12px;
+                width: 100%;
+            }
+
+            .header-logo {
+                width: 48px;
+                height: 48px;
+            }
+
+            .bet-recommendation {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .match-teams {
+                gap: 4px;
+            }
+
+            .team {
+                padding: 6px 10px;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="header">
+            <div class="header-content">
+                <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoyPro" class="header-logo">
+                <div class="header-text">
+                    <h1>Mejores apuestas</h1>
+                    <p>Recomendaciones por fecha de encuentro</p>
+                </div>
+            </div>
+            <a href="/" class="header-link">← Volver al dashboard</a>
+        </div>
+
+        {% if refresh_log %}
+            <div class="refresh-status">
+                {% for item in refresh_log %}
+                    <div class="status-item">✓ {{ item }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if best_entries %}
+            <div class="entries">
+                {% for item in best_entries %}
+                    <article class="entry-card">
+                        <div class="entry-header">
+                            <div class="date-badge">📅 {{ item.date_label }}</div>
+                            <div class="league-info">
+                                <img src="{{ item.league_logo_url }}" alt="{{ item.league_name }}">
+                                <span>{{ item.league_name }}</span>
+                            </div>
+                            <div style="color: var(--text-muted); font-size: 0.85rem;">⏰ {{ item.kickoff }}</div>
+                        </div>
+
+                        <div class="match-teams">
+                            <div class="team">
+                                {% if item.home_logo %}<img src="{{ item.home_logo }}" alt="">{% endif %}
+                                <span>{{ item.home_team }}</span>
+                            </div>
+                            <span class="vs-separator">VS</span>
+                            <div class="team">
+                                {% if item.away_logo %}<img src="{{ item.away_logo }}" alt="">{% endif %}
+                                <span>{{ item.away_team }}</span>
+                            </div>
+                        </div>
+
+                        <div class="bet-recommendation">
+                            <div class="stat-box">
+                                <span class="stat-label">Mercado</span>
+                                <span class="stat-value">{{ item.market }}</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Selección</span>
+                                <span class="stat-value">{{ item.pick }}</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Probabilidad</span>
+                                <span class="stat-value {% if item.probability >= 70 %}high{% elif item.probability >= 50 %}medium{% else %}low{% endif %}">{{ item.probability }}%</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Confianza</span>
+                                <span class="stat-value">{{ item.confidence }}</span>
+                            </div>
+                        </div>
+
+                        <a class="action-button" href="{{ item.dashboard_url }}">Abrir análisis completo →</a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No hay encuentros disponibles</h3>
+                <p>No se encontraron encuentros pendientes o no fue posible calcular recomendaciones.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

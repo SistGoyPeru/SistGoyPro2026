@@ -179,28 +179,38 @@
         }
         .bet-cat-card {
             border-radius: 12px;
-            padding: 16px 14px 14px;
+            padding: clamp(12px, 2.5vw, 16px) clamp(10px, 2.5vw, 14px) clamp(10px, 2.5vw, 14px);
             display: flex;
             flex-direction: column;
             gap: 4px;
             border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .bet-cat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
         .bet-cat-card.cat-alta  { background: linear-gradient(145deg, rgba(27,80,50,0.88), rgba(8,40,24,0.9)); border-color: rgba(108,227,163,0.35); }
         .bet-cat-card.cat-media { background: linear-gradient(145deg, rgba(60,52,12,0.88), rgba(30,26,6,0.9));  border-color: rgba(246,207,85,0.35); }
         .bet-cat-card.cat-baja  { background: linear-gradient(145deg, rgba(65,27,10,0.88), rgba(32,12,4,0.9));  border-color: rgba(242,139,90,0.35); }
-        .cat-label  { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.72; }
-        .cat-market { font-size: 0.78rem; opacity: 0.65; margin-top: 2px; }
-        .cat-pick   { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-size: 1.3rem; font-weight: 700; }
-        .cat-prob   { font-size: 1.5rem; font-weight: 700; line-height: 1.1; }
-        .cat-badge  { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+        .cat-label  { font-size: clamp(0.62rem, 1.8vw, 0.72rem); text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.72; }
+        .cat-market { font-size: clamp(0.68rem, 1.9vw, 0.78rem); opacity: 0.65; margin-top: 2px; }
+        .cat-pick   { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-size: clamp(1.1rem, 3vw, 1.3rem); font-weight: 700; }
+        .cat-prob   { font-size: clamp(1.3rem, 3.5vw, 1.5rem); font-weight: 700; line-height: 1.1; }
+        .cat-badge  { font-size: clamp(0.58rem, 1.6vw, 0.68rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
                       border-radius: 4px; padding: 2px 7px; width: fit-content; margin-top: 4px; }
 
         /* ---- apuesta múltiple ---- */
         .multiple-ticket {
             border-radius: 14px;
-            padding: 18px 20px;
+            padding: clamp(14px, 3vw, 18px) clamp(16px, 4vw, 20px);
             margin-bottom: 8px;
             border: 1px solid rgba(255,255,255,0.13);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .multiple-ticket:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         .multiple-ticket.multi-alta  { background: linear-gradient(145deg, rgba(20,70,44,0.92), rgba(8,40,24,0.95)); border-color: rgba(108,227,163,0.4); }
         .multiple-ticket.multi-media { background: linear-gradient(145deg, rgba(55,47,10,0.92), rgba(28,24,4,0.95));  border-color: rgba(246,207,85,0.4); }
@@ -210,10 +220,16 @@
             align-items: center;
             gap: 10px;
             margin-bottom: 12px;
+            flex-wrap: wrap;
         }
-        .multi-icon  { font-size: 1.3rem; }
-        .multi-title { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-size: 1.15rem;
+        .multi-icon  { font-size: clamp(1.1rem, 2.5vw, 1.3rem); }
+        .multi-title { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-size: clamp(0.95rem, 2.5vw, 1.15rem);
                        text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; flex: 1; }
+        .multi-legs  { margin: 0 0 14px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+        .multi-legs li { font-size: clamp(0.8rem, 2vw, 0.9rem); opacity: 0.9; }
+        .multi-footer { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .multi-footer span { font-size: clamp(0.72rem, 1.8vw, 0.82rem); opacity: 0.72; }
+        .multi-prob  { font-size: clamp(1.6rem, 4vw, 2rem); line-height: 1; font-weight: 700; flex: 1; }
         .multi-legs  { margin: 0 0 14px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
         .multi-legs li { font-size: 0.9rem; opacity: 0.9; }
         .multi-footer { display: flex; align-items: baseline; gap: 10px; }
@@ -236,7 +252,7 @@
 
         .selector,
         .prediction {
-            padding: 24px;
+            padding: clamp(16px, 4vw, 24px);
             background: linear-gradient(150deg, rgba(10, 48, 30, 0.86), rgba(6, 28, 18, 0.9));
             animation-delay: 0.12s;
         }
@@ -245,19 +261,20 @@
             font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            font-size: 1.52rem;
-            margin: 0 0 18px;
+            font-size: clamp(1.2rem, 4vw, 1.52rem);
+            margin: 0 0 clamp(14px, 3vw, 18px);
         }
 
         .support {
             color: var(--muted);
-            margin: 0 0 18px;
+            margin: 0 0 clamp(14px, 3vw, 18px);
             line-height: 1.5;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
         }
 
         form {
             display: grid;
-            gap: 16px;
+            gap: clamp(12px, 3vw, 16px);
         }
 
         select,
@@ -265,8 +282,9 @@
             width: 100%;
             border-radius: 10px;
             border: 1px solid var(--line);
-            padding: 14px 16px;
+            padding: clamp(12px, 3vw, 14px) clamp(12px, 3vw, 16px);
             font: inherit;
+            font-size: clamp(0.9rem, 2.2vw, 1rem);
         }
 
         select {
@@ -284,6 +302,16 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            min-height: 44px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(246, 207, 85, 0.33);
+        }
+        
+        button:active {
+            transform: translateY(0);
         }
 
         button:hover {
@@ -295,7 +323,7 @@
         .score-list,
         .model-list {
             display: grid;
-            gap: 10px;
+            gap: clamp(8px, 2vw, 12px);
             margin-top: 18px;
         }
 
@@ -303,11 +331,12 @@
             display: flex;
             justify-content: space-between;
             gap: 12px;
-            padding: 12px 14px;
+            padding: clamp(10px, 2.5vw, 12px) clamp(10px, 2.5vw, 14px);
             border-radius: 10px;
             background: rgba(5, 28, 18, 0.66);
             border: 1px solid var(--line);
             color: #d8ebe1;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
         }
 
         .sync-note {
@@ -396,12 +425,178 @@
             border: 1px solid rgba(246, 207, 85, 0.28);
         }
 
+        .injury-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-top: 14px;
+        }
+
+        .injury-card {
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(7, 32, 21, 0.8);
+            border: 1px solid var(--line);
+        }
+
+        .injury-card h4 {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+        }
+
+        .injury-list {
+            margin: 0;
+            padding-left: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .injury-list li {
+            color: #d8ebe1;
+            font-size: 0.9rem;
+            line-height: 1.35;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .injury-list li.tier-critica {
+            border-color: rgba(242, 139, 90, 0.45);
+            background: rgba(242, 139, 90, 0.12);
+        }
+
+        .injury-list li.tier-alta {
+            border-color: rgba(246, 207, 85, 0.4);
+            background: rgba(246, 207, 85, 0.1);
+        }
+
+        .injury-list li.tier-media {
+            border-color: rgba(108, 227, 163, 0.22);
+        }
+
+        .injury-list small {
+            display: block;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .injury-section {
+            margin-top: 12px;
+        }
+
+        .injury-section h5 {
+            margin: 0 0 8px;
+            font-size: 0.82rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #cfe5d9;
+        }
+
+        .injury-badge {
+            display: inline-flex;
+            margin-top: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .injury-badge.critica {
+            color: #ffd5c2;
+            background: rgba(242, 139, 90, 0.18);
+        }
+
+        .injury-badge.alta {
+            color: #fde9ab;
+            background: rgba(246, 207, 85, 0.18);
+        }
+
+        .injury-badge.media {
+            color: #bdeed2;
+            background: rgba(108, 227, 163, 0.14);
+        }
+
+        .injury-empty {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
         .report-block {
             margin-top: 18px;
             padding: 16px;
             border-radius: 12px;
             background: rgba(7, 32, 21, 0.8);
             border: 1px solid var(--line);
+        }
+
+        .context-driver {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(108, 227, 163, 0.10);
+            border: 1px solid rgba(108, 227, 163, 0.28);
+        }
+
+        .context-driver span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+
+        .context-driver strong {
+            display: block;
+            color: #d8f7e6;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .context-driver p {
+            margin: 0;
+            color: #cfe5d9;
+            font-size: 0.92rem;
+            line-height: 1.4;
+        }
+
+        .impact-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .impact-card {
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: rgba(6, 31, 20, 0.78);
+            border: 1px solid var(--line);
+        }
+
+        .impact-card span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 5px;
+        }
+
+        .impact-card strong {
+            display: block;
+            color: #ffffff;
+            font-size: 1rem;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            letter-spacing: 0.02em;
         }
 
         .report-title {
@@ -540,9 +735,10 @@
         .league-tabs {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
             padding: 0 0 18px;
             border-bottom: 1px solid var(--line);
-            margin-bottom: 18px;
+            margin-bottom: 12px;
         }
 
         .league-tab {
@@ -572,6 +768,37 @@
             background: rgba(246,207,85,0.12);
             border-color: var(--accent);
             color: var(--accent);
+        }
+
+        .quick-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 0 0 18px;
+        }
+
+        .quick-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(246, 207, 85, 0.32);
+            background: rgba(246, 207, 85, 0.12);
+            color: var(--accent);
+            text-decoration: none;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            transition: transform 0.2s, background 0.2s, border-color 0.2s;
+        }
+
+        .quick-link:hover {
+            transform: translateY(-1px);
+            background: rgba(246, 207, 85, 0.18);
+            border-color: rgba(246, 207, 85, 0.5);
         }
 
         .league-flag { font-size: 1.1rem; }
@@ -707,11 +934,87 @@
                 grid-column: auto;
             }
 
-            .headline,
-            .meta,
-            .selector,
-            .prediction {
-                padding: 20px;
+            .shell {
+                padding: clamp(12px, 3vw, 16px) clamp(10px, 2vw, 12px) clamp(20px, 3vw, 24px);
+            }
+
+            .fixture-name {
+                font-size: clamp(1.4rem, 4vw, 1.7rem);
+            }
+
+            .league-tabs {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .league-tab {
+                padding: clamp(8px, 2vw, 9px) clamp(14px, 3vw, 20px);
+                font-size: clamp(0.8rem, 2vw, 0.95rem);
+            }
+
+            .quick-link {
+                padding: clamp(8px, 2vw, 10px) clamp(12px, 2.5vw, 14px);
+                font-size: clamp(0.8rem, 2vw, 0.95rem);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero {
+                gap: 12px;
+                grid-template-columns: 1fr;
+            }
+
+            .brand-row img {
+                width: clamp(120px, 30vw, 160px);
+            }
+
+            .meta {
+                order: 2;
+            }
+
+            .fixture-head {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .team-chip {
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .shell {
+                padding: 10px 8px 20px;
+            }
+
+            h1 {
+                font-size: clamp(1.3rem, 5vw, 2.1rem);
+            }
+
+            .section-title {
+                font-size: clamp(1rem, 4vw, 1.2rem);
+            }
+
+            .bet-cat-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .multi-legs {
+                padding-left: 12px;
+                gap: 4px;
+            }
+
+            .brand-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .brand-row img {
+                width: clamp(100px, 25vw, 140px);
             }
 
             .shell {
@@ -765,6 +1068,10 @@
                 <img class="league-logo" src="https://media.api-sports.io/football/leagues/61.png" alt="Ligue 1 Francia"> Ligue 1 Francia
             </a>
         </nav>
+
+        <div class="quick-links">
+            <a class="quick-link" href="{% url 'best_bets_by_date' %}">Mejor apuesta por fecha</a>
+        </div>
 
         <section class="content">
             <article class="panel selector">
@@ -849,6 +1156,51 @@
                     <div class="fixture-meta">{{ prediction.fixture.jornada }} | {{ prediction.fixture.fecha }} | {{ prediction.fixture.hora }}</div>
 
                     <div class="prediction-badge">Pronóstico principal: {{ prediction.outcome }}</div>
+
+                    <div class="context-driver">
+                        <span>Factor dominante</span>
+                        <strong>{{ prediction.context.explanation.main_driver|capfirst }}</strong>
+                        <p>{{ prediction.context.explanation.summary }}</p>
+                    </div>
+
+                    <div class="impact-grid">
+                        <div class="impact-card">
+                            <span>Impacto tabla</span>
+                            <strong>{{ prediction.context.impact.table_total_shift|floatformat:3 }}</strong>
+                        </div>
+                        <div class="impact-card">
+                            <span>Impacto lesiones</span>
+                            <strong>{{ prediction.context.impact.injury_shift|floatformat:3 }}</strong>
+                        </div>
+                        <div class="impact-card">
+                            <span>Severidad clima</span>
+                            <strong>{{ prediction.context.impact.weather_severity|floatformat:3 }}</strong>
+                        </div>
+                        <div class="impact-card">
+                            <span>Impacto ELO</span>
+                            <strong>{{ prediction.context.impact.elo_shift|floatformat:3 }}</strong>
+                        </div>
+                        <div class="impact-card">
+                            <span>Impacto forma</span>
+                            <strong>{{ prediction.context.impact.form_shift|floatformat:3 }}</strong>
+                        </div>
+                        <div class="impact-card">
+                            <span>Racha</span>
+                            <strong>{{ prediction.context.impact.streak_shift|floatformat:3 }}</strong>
+                        </div>
+                        <div class="impact-card">
+                            <span>Fiabilidad bajas</span>
+                            <strong>{{ prediction.context.impact.injury_source_reliability|floatformat:3 }}</strong>
+                        </div>
+                        <div class="impact-card">
+                            <span>Peso fuente bajas</span>
+                            <strong>{{ prediction.context.impact.injury_source_weight|floatformat:3 }}</strong>
+                        </div>
+                        <div class="impact-card">
+                            <span>Ajuste combinado</span>
+                            <strong>{{ prediction.context.impact.combined_shift|floatformat:3 }}</strong>
+                        </div>
+                    </div>
 
                     <section class="report-block" style="margin-top:16px">
                         <h3 class="report-title">Apuestas por categoría</h3>
@@ -1095,6 +1447,79 @@
                             <strong>{{ prediction.context.players.status }}</strong>
                             <span>{{ prediction.context.players.note }}</span>
                             {% if prediction.context.players.source %}<em style="font-size:0.78em;opacity:0.7">Fuente: {{ prediction.context.players.source }}</em>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="injury-grid">
+                        <div class="injury-card">
+                            <h4>Bajas {{ prediction.fixture.local }}</h4>
+                            {% if prediction.context.players_by_team.home.injuries or prediction.context.players_by_team.home.suspensions %}
+                                {% if prediction.context.players_by_team.home.injuries %}
+                                    <div class="injury-section">
+                                        <h5>Lesiones</h5>
+                                        <ul class="injury-list">
+                                            {% for item in prediction.context.players_by_team.home.injuries %}
+                                                <li class="tier-{{ item.importance_tier }}">
+                                                    <strong>{{ item.player }}</strong>
+                                                    <small>{{ item.reason }} | Regreso: {{ item.until }}{% if item.market_value %} | Valor: {{ item.market_value }}{% endif %}</small>
+                                                    <span class="injury-badge {{ item.importance_tier }}">{{ item.importance_tier }}</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                                {% if prediction.context.players_by_team.home.suspensions %}
+                                    <div class="injury-section">
+                                        <h5>Suspensiones</h5>
+                                        <ul class="injury-list">
+                                            {% for item in prediction.context.players_by_team.home.suspensions %}
+                                                <li class="tier-{{ item.importance_tier }}">
+                                                    <strong>{{ item.player }}</strong>
+                                                    <small>{{ item.reason }} | Regreso: {{ item.until }}{% if item.market_value %} | Valor: {{ item.market_value }}{% endif %}</small>
+                                                    <span class="injury-badge {{ item.importance_tier }}">{{ item.importance_tier }}</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <p class="injury-empty">Sin bajas listadas para este equipo.</p>
+                            {% endif %}
+                        </div>
+                        <div class="injury-card">
+                            <h4>Bajas {{ prediction.fixture.visitante }}</h4>
+                            {% if prediction.context.players_by_team.away.injuries or prediction.context.players_by_team.away.suspensions %}
+                                {% if prediction.context.players_by_team.away.injuries %}
+                                    <div class="injury-section">
+                                        <h5>Lesiones</h5>
+                                        <ul class="injury-list">
+                                            {% for item in prediction.context.players_by_team.away.injuries %}
+                                                <li class="tier-{{ item.importance_tier }}">
+                                                    <strong>{{ item.player }}</strong>
+                                                    <small>{{ item.reason }} | Regreso: {{ item.until }}{% if item.market_value %} | Valor: {{ item.market_value }}{% endif %}</small>
+                                                    <span class="injury-badge {{ item.importance_tier }}">{{ item.importance_tier }}</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                                {% if prediction.context.players_by_team.away.suspensions %}
+                                    <div class="injury-section">
+                                        <h5>Suspensiones</h5>
+                                        <ul class="injury-list">
+                                            {% for item in prediction.context.players_by_team.away.suspensions %}
+                                                <li class="tier-{{ item.importance_tier }}">
+                                                    <strong>{{ item.player }}</strong>
+                                                    <small>{{ item.reason }} | Regreso: {{ item.until }}{% if item.market_value %} | Valor: {{ item.market_value }}{% endif %}</small>
+                                                    <span class="injury-badge {{ item.importance_tier }}">{{ item.importance_tier }}</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <p class="injury-empty">Sin bajas listadas para este equipo.</p>
+                            {% endif %}
                         </div>
                     </div>
 

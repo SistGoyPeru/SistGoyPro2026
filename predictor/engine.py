@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import os
+import re
 from functools import lru_cache
 from math import exp, factorial
 from pathlib import Path
@@ -433,6 +434,51 @@ ZERO_STATS = {
     "matches": 0,
 }
 
+CONTEXT_PROFILES = {
+    "conservador": {
+        "position_weight": 0.055,
+        "ppg_weight": 0.07,
+        "gdpg_weight": 0.04,
+        "form_weight": 0.045,
+        "elo_weight": 0.04,
+        "streak_weight": 0.03,
+        "table_shift_cap": 0.1,
+        "injury_load_weight": 0.013,
+        "injury_count_weight": 0.002,
+        "injury_shift_cap": 0.1,
+        "combined_shift_cap": 0.13,
+    },
+    "balanceado": {
+        "position_weight": 0.07,
+        "ppg_weight": 0.09,
+        "gdpg_weight": 0.05,
+        "form_weight": 0.06,
+        "elo_weight": 0.05,
+        "streak_weight": 0.04,
+        "table_shift_cap": 0.14,
+        "injury_load_weight": 0.018,
+        "injury_count_weight": 0.003,
+        "injury_shift_cap": 0.14,
+        "combined_shift_cap": 0.18,
+    },
+    "agresivo": {
+        "position_weight": 0.085,
+        "ppg_weight": 0.11,
+        "gdpg_weight": 0.06,
+        "form_weight": 0.075,
+        "elo_weight": 0.06,
+        "streak_weight": 0.05,
+        "table_shift_cap": 0.18,
+        "injury_load_weight": 0.024,
+        "injury_count_weight": 0.004,
+        "injury_shift_cap": 0.18,
+        "combined_shift_cap": 0.24,
+    },
+}
+
+ACTIVE_CONTEXT_PROFILE = os.getenv("CONTEXT_PROFILE", "agresivo").strip().lower()
+CONTEXT_TUNING = CONTEXT_PROFILES.get(ACTIVE_CONTEXT_PROFILE, CONTEXT_PROFILES["agresivo"])
+
 
 class MatchPredictionService:
     def __init__(self, config: dict | None = None) -> None:
@@ -771,6 +817,27 @@ class MatchPredictionService:
         self._transfermarkt_url_cache[team_name] = None
         return None
 
+    def _normalize_return_value(self, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized or normalized in {"0", "0.0", "-", "--", "N/A", "n/a"}:
+            return "No confirmado"
+        return normalized
+
+    def _is_plausible_absence_item(self, player: str, reason: str, until: str) -> bool:
+        player_clean = str(player or "").strip()
+        reason_clean = str(reason or "").strip()
+        until_clean = self._normalize_return_value(until)
+
+        if len(player_clean) < 4 or player_clean.isdigit():
+            return False
+        if len(reason_clean) < 4:
+            return False
+        if re.fullmatch(r"\d{1,2}", until_clean):
+            return False
+        if player_clean.lower() in {"unknown", "player", "jugador"}:
+            return False
+        return True
+
     def _transfermarkt_players_context(self, home: str, away: str) -> dict[str, str | list[dict[str, str]]]:
         injuries: list[dict[str, str]] = []
         for team in [home, away]:
@@ -793,12 +860,23 @@ class MatchPredictionService:
                         parts = [part.strip() for part in row.get_text(" | ", strip=True).split(" | ") if part.strip()]
                         if len(parts) < 6:
                             continue
+                        market_value_text = next((part for part in parts if "€" in part), "")
+                        market_value_million = self._parse_market_value_million(market_value_text)
+                        importance_score = self._injury_importance_score(
+                            reason=parts[3],
+                            market_value_million=market_value_million,
+                        )
+                        until_value = self._normalize_return_value(parts[5] if len(parts) > 5 else "")
+                        if not self._is_plausible_absence_item(parts[0], parts[3], until_value):
+                            continue
                         injuries.append(
                             {
                                 "team": team,
                                 "player": parts[0],
                                 "reason": parts[3],
-                                "until": parts[5] if len(parts) > 5 and parts[5] else "N/D",
+                                "until": until_value,
+                                "market_value": market_value_text,
+                                "importance_score": str(round(importance_score, 2)),
                             }
                         )
             except Exception:
@@ -857,12 +935,17 @@ class MatchPredictionService:
                     player = item.get("player", {})
                     fixture = item.get("fixture", {})
                     details = item.get("player", {}).get("reason", "Sin detalle")
+                    until_value = self._normalize_return_value(str(fixture.get("date", ""))[:10])
+                    player_name = str(player.get("name", "Jugador"))
+                    if not self._is_plausible_absence_item(player_name, str(details), until_value):
+                        continue
                     injuries.append(
                         {
                             "team": team,
-                            "player": str(player.get("name", "Jugador")),
+                            "player": player_name,
                             "reason": str(details),
-                            "until": str(fixture.get("date", ""))[:10] or "N/D",
+                            "until": until_value,
+                            "importance_score": "1.0",
                         }
                     )
 
@@ -892,6 +975,434 @@ class MatchPredictionService:
 
         self._injuries_cache[cache_key] = result
         return result
+
+    def _parse_market_value_million(self, value_text: str) -> float:
+        text = str(value_text or "").strip().lower().replace(" ", "")
+        if not text or "€" not in text:
+            return 0.0
+
+        match = re.search(r"([\d\.,]+)([mk])", text)
+        if not match:
+            return 0.0
+
+        raw_number = match.group(1)
+        suffix = match.group(2)
+
+        normalized = raw_number
+        if "," in normalized and "." in normalized:
+            if normalized.rfind(",") > normalized.rfind("."):
+                normalized = normalized.replace(".", "").replace(",", ".")
+            else:
+                normalized = normalized.replace(",", "")
+        elif "," in normalized:
+            normalized = normalized.replace(",", ".")
+
+        try:
+            base = float(normalized)
+        except ValueError:
+            return 0.0
+
+        return base if suffix == "m" else base / 1000.0
+
+    def _injury_importance_score(self, reason: str, market_value_million: float) -> float:
+        score = 1.0
+        if market_value_million > 0:
+            # Jugadores con mayor valor de mercado suelen tener mas impacto competitivo.
+            score += min(1.8, market_value_million / 20.0)
+
+        reason_l = str(reason).lower()
+        severe_tokens = (
+            "cruciate",
+            "ligament",
+            "meniscus",
+            "achilles",
+            "fracture",
+            "surgery",
+            "tendon",
+        )
+        if any(token in reason_l for token in severe_tokens):
+            score += 0.35
+        elif "muscle" in reason_l or "hamstring" in reason_l:
+            score += 0.18
+        elif "suspension" in reason_l:
+            score += 0.1
+
+        return max(0.7, min(score, 3.5))
+
+    def _injury_item_weight(self, item: dict[str, str]) -> float:
+        raw_score = item.get("importance_score", 1.0)
+        try:
+            score = float(str(raw_score))
+        except (ValueError, TypeError):
+            score = 1.0
+
+        # Reforzar por razon, incluso cuando no hay valor de mercado.
+        reason_l = str(item.get("reason", "")).lower()
+        if any(token in reason_l for token in ("cruciate", "ligament", "fracture", "achilles", "surgery")):
+            score += 0.2
+        return max(0.7, min(score, 3.5))
+
+    def _injury_counts(self, players_status: dict[str, str | list[dict[str, str]]], home: str, away: str) -> tuple[int, int, float, float]:
+        items = players_status.get("items", []) if isinstance(players_status, dict) else []
+        if not isinstance(items, list):
+            return 0, 0, 0.0, 0.0
+
+        home_count = 0
+        away_count = 0
+        home_load = 0.0
+        away_load = 0.0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            team = str(item.get("team", "")).strip()
+            weight = self._injury_item_weight(item)
+            if team == home:
+                home_count += 1
+                home_load += weight
+            elif team == away:
+                away_count += 1
+                away_load += weight
+        return home_count, away_count, round(home_load, 3), round(away_load, 3)
+
+    def _group_players_by_team(
+        self,
+        players_status: dict[str, str | list[dict[str, str]]],
+        home: str,
+        away: str,
+    ) -> dict[str, dict[str, list[dict[str, str]]]]:
+        grouped = {
+            "home": {"injuries": [], "suspensions": []},
+            "away": {"injuries": [], "suspensions": []},
+        }
+        items = players_status.get("items", []) if isinstance(players_status, dict) else []
+        if not isinstance(items, list):
+            return grouped
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            reason = str(item.get("reason", "Sin detalle"))
+            reason_l = reason.lower()
+            category = "suspensions" if any(token in reason_l for token in ("susp", "suspension", "ban", "red card", "yellow card")) else "injuries"
+            try:
+                importance_score = float(str(item.get("importance_score", "1.0")))
+            except (TypeError, ValueError):
+                importance_score = 1.0
+
+            if importance_score >= 2.5:
+                importance_tier = "critica"
+            elif importance_score >= 1.6:
+                importance_tier = "alta"
+            else:
+                importance_tier = "media"
+
+            normalized = {
+                "player": str(item.get("player", "Jugador")),
+                "reason": reason,
+                "until": str(item.get("until", "N/D")),
+                "market_value": str(item.get("market_value", "")),
+                "importance_score": f"{importance_score:.2f}",
+                "importance_tier": importance_tier,
+            }
+            team = str(item.get("team", "")).strip()
+            if team == home:
+                grouped["home"][category].append(normalized)
+            elif team == away:
+                grouped["away"][category].append(normalized)
+
+        for side in ("home", "away"):
+            for category in ("injuries", "suspensions"):
+                grouped[side][category].sort(
+                    key=lambda item: float(item.get("importance_score", "0") or 0),
+                    reverse=True,
+                )
+        return grouped
+
+    def _players_source_reliability(self, players_status: dict[str, str | list[dict[str, str]]]) -> tuple[float, float]:
+        source = str(players_status.get("source", "")).strip().lower() if isinstance(players_status, dict) else ""
+        items = players_status.get("items", []) if isinstance(players_status, dict) else []
+        item_count = len(items) if isinstance(items, list) else 0
+
+        if "api-football" in source:
+            base_score = 0.92
+        elif "transfermarkt" in source:
+            base_score = 0.68
+        elif source:
+            base_score = 0.6
+        else:
+            base_score = 0.45
+
+        completeness_bonus = min(0.08, item_count * 0.01)
+        reliability_score = min(1.0, base_score + completeness_bonus)
+        source_weight = 0.55 + (reliability_score * 0.45)
+        return round(reliability_score, 3), round(source_weight, 3)
+
+    def _context_weather_severity(self, weather: dict[str, str | float]) -> float:
+        if str(weather.get("status", "")) != "Disponible":
+            return 0.0
+        rain = float(weather.get("rain_probability") or 0.0)
+        wind = float(weather.get("wind_speed") or 0.0)
+        temp = float(weather.get("temperature") or 0.0)
+
+        rain_term = min(max(rain, 0.0), 100.0) / 100.0 * 0.08
+        wind_term = min(max(wind - 18.0, 0.0), 25.0) / 25.0 * 0.04
+        cold_term = min(max(10.0 - temp, 0.0), 15.0) / 15.0 * 0.03
+        return min(0.14, rain_term + wind_term + cold_term)
+
+    def _table_context_shift(
+        self,
+        home_table: dict[str, float | int | str],
+        away_table: dict[str, float | int | str],
+        home_stats: dict[str, float],
+        away_stats: dict[str, float],
+        home_elo: float,
+        away_elo: float,
+        home_streak: int,
+        away_streak: int,
+    ) -> tuple[float, dict[str, float]]:
+        n_teams = max(len(self.standings_snapshot), 2)
+
+        def _to_float(value: float | int | str | None, default: float = 0.0) -> float:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        home_pos = _to_float(home_table.get("position"), (n_teams + 1) / 2)
+        away_pos = _to_float(away_table.get("position"), (n_teams + 1) / 2)
+        home_points = _to_float(home_table.get("points"), 0.0)
+        away_points = _to_float(away_table.get("points"), 0.0)
+        home_played = max(1.0, _to_float(home_table.get("played"), 1.0))
+        away_played = max(1.0, _to_float(away_table.get("played"), 1.0))
+        home_gf = _to_float(home_table.get("gf"), 0.0)
+        away_gf = _to_float(away_table.get("gf"), 0.0)
+        home_ga = _to_float(home_table.get("ga"), 0.0)
+        away_ga = _to_float(away_table.get("ga"), 0.0)
+
+        pos_gap = (away_pos - home_pos) / max(1.0, (n_teams - 1))
+        home_ppg = home_points / home_played
+        away_ppg = away_points / away_played
+        ppg_gap = (home_ppg - away_ppg) / 3.0
+        home_gdpg = (home_gf - home_ga) / home_played
+        away_gdpg = (away_gf - away_ga) / away_played
+        gdpg_gap = (home_gdpg - away_gdpg) / 2.5
+        recent_points_gap = (home_stats["points"] - away_stats["points"]) / 3.0
+        elo_gap = (home_elo - away_elo) / 400.0
+        streak_gap = (home_streak - away_streak) / 6.0
+
+        pos_shift = max(-0.07, min(0.07, pos_gap * CONTEXT_TUNING["position_weight"]))
+        ppg_shift = max(-0.06, min(0.06, ppg_gap * CONTEXT_TUNING["ppg_weight"]))
+        gd_shift = max(-0.05, min(0.05, gdpg_gap * CONTEXT_TUNING["gdpg_weight"]))
+        form_shift = max(-0.05, min(0.05, recent_points_gap * CONTEXT_TUNING["form_weight"]))
+        elo_shift = max(-0.05, min(0.05, elo_gap * CONTEXT_TUNING["elo_weight"]))
+        streak_shift = max(-0.04, min(0.04, streak_gap * CONTEXT_TUNING["streak_weight"]))
+
+        total_shift = pos_shift + ppg_shift + gd_shift + form_shift + elo_shift + streak_shift
+        total_shift = max(-CONTEXT_TUNING["table_shift_cap"], min(CONTEXT_TUNING["table_shift_cap"], total_shift))
+
+        return total_shift, {
+            "table_pos_shift": round(pos_shift, 4),
+            "table_ppg_shift": round(ppg_shift, 4),
+            "table_gd_shift": round(gd_shift, 4),
+            "form_shift": round(form_shift, 4),
+            "elo_shift": round(elo_shift, 4),
+            "streak_shift": round(streak_shift, 4),
+            "table_total_shift": round(total_shift, 4),
+        }
+
+    def _apply_context_adjustments(
+        self,
+        class_map: dict[str, float],
+        weather: dict[str, str | float],
+        players_status: dict[str, str | list[dict[str, str]]],
+        home: str,
+        away: str,
+        home_table: dict[str, float | int | str],
+        away_table: dict[str, float | int | str],
+        home_stats: dict[str, float],
+        away_stats: dict[str, float],
+        home_elo: float,
+        away_elo: float,
+        home_streak: int,
+        away_streak: int,
+    ) -> tuple[dict[str, float], dict[str, float | int]]:
+        p_home = float(class_map.get("H", 0.0))
+        p_draw = float(class_map.get("D", 0.0))
+        p_away = float(class_map.get("A", 0.0))
+
+        weather_severity = self._context_weather_severity(weather)
+        home_injuries, away_injuries, home_injury_load, away_injury_load = self._injury_counts(players_status, home, away)
+        injury_reliability, injury_source_weight = self._players_source_reliability(players_status)
+        table_shift, table_impact = self._table_context_shift(
+            home_table,
+            away_table,
+            home_stats,
+            away_stats,
+            home_elo,
+            away_elo,
+            home_streak,
+            away_streak,
+        )
+        injury_shift = (away_injury_load - home_injury_load) * CONTEXT_TUNING["injury_load_weight"]
+        injury_shift += (away_injuries - home_injuries) * CONTEXT_TUNING["injury_count_weight"]
+        injury_shift *= injury_source_weight
+        injury_shift = max(-CONTEXT_TUNING["injury_shift_cap"], min(CONTEXT_TUNING["injury_shift_cap"], injury_shift))
+        combined_shift = max(-CONTEXT_TUNING["combined_shift_cap"], min(CONTEXT_TUNING["combined_shift_cap"], injury_shift + table_shift))
+
+        # Clima adverso: tiende a subir empate y bajar extremos.
+        home_weather_factor = 1.0 - (weather_severity * 0.25)
+        away_weather_factor = 1.0 - (weather_severity * 0.25)
+        draw_weather_factor = 1.0 + weather_severity
+
+        # Mas bajas de un equipo reducen su probabilidad de victoria.
+        home_injury_factor = 1.0 + combined_shift
+        away_injury_factor = 1.0 - combined_shift
+        draw_injury_factor = 1.0 - (abs(combined_shift) * 0.25)
+
+        raw_home = max(0.001, p_home * home_weather_factor * home_injury_factor)
+        raw_draw = max(0.001, p_draw * draw_weather_factor * draw_injury_factor)
+        raw_away = max(0.001, p_away * away_weather_factor * away_injury_factor)
+        total = raw_home + raw_draw + raw_away
+
+        adjusted = {
+            "H": raw_home / total,
+            "D": raw_draw / total,
+            "A": raw_away / total,
+        }
+        impact = {
+            "weather_severity": round(weather_severity, 4),
+            "home_injuries": home_injuries,
+            "away_injuries": away_injuries,
+            "home_injury_load": round(home_injury_load, 3),
+            "away_injury_load": round(away_injury_load, 3),
+            "injury_source_reliability": injury_reliability,
+            "injury_source_weight": injury_source_weight,
+            "injury_shift": round(injury_shift, 4),
+            "combined_shift": round(combined_shift, 4),
+        }
+        impact.update(table_impact)
+        return adjusted, impact
+
+    def _score_projection_from_expected(
+        self,
+        expected_home: float,
+        expected_away: float,
+    ) -> dict[str, float | str | list[dict[str, float | str]]]:
+        expected_home = min(max(expected_home, 0.2), 4.0)
+        expected_away = min(max(expected_away, 0.2), 4.0)
+
+        score_probabilities = []
+        for home_goals in range(6):
+            for away_goals in range(6):
+                home_prob = exp(-expected_home) * (expected_home ** home_goals) / factorial(home_goals)
+                away_prob = exp(-expected_away) * (expected_away ** away_goals) / factorial(away_goals)
+                score_probabilities.append(
+                    {
+                        "score": f"{home_goals}-{away_goals}",
+                        "probability": round(home_prob * away_prob * 100, 2),
+                    }
+                )
+        score_probabilities.sort(key=lambda item: item["probability"], reverse=True)
+        return {
+            "expected_home": round(expected_home, 2),
+            "expected_away": round(expected_away, 2),
+            "total_expected": round(expected_home + expected_away, 2),
+            "best_score": score_probabilities[0]["score"],
+            "top_scores": score_probabilities[:3],
+        }
+
+    def _poisson_draw_probability(self, expected_home: float, expected_away: float, max_goals: int = 6) -> float:
+        probability = 0.0
+        for goals in range(max_goals + 1):
+            home_prob = exp(-expected_home) * (expected_home ** goals) / factorial(goals)
+            away_prob = exp(-expected_away) * (expected_away ** goals) / factorial(goals)
+            probability += home_prob * away_prob
+        return max(0.0, min(1.0, probability))
+
+    def _stabilize_probabilities(
+        self,
+        class_map: dict[str, float],
+        score_projection: dict[str, float | str | list[dict[str, float | str]]],
+    ) -> dict[str, float]:
+        p_home = float(class_map.get("H", 0.0))
+        p_draw = float(class_map.get("D", 0.0))
+        p_away = float(class_map.get("A", 0.0))
+        expected_home = float(score_projection.get("expected_home", 1.0))
+        expected_away = float(score_projection.get("expected_away", 1.0))
+        total_expected = float(score_projection.get("total_expected", expected_home + expected_away))
+        xg_gap = abs(expected_home - expected_away)
+
+        if xg_gap <= 0.35 and total_expected <= 3.2:
+            poisson_draw = self._poisson_draw_probability(expected_home, expected_away)
+            min_draw = min(0.28, max(0.12, poisson_draw * 0.72))
+            if p_draw < min_draw:
+                remaining = max(0.001, 1.0 - min_draw)
+                non_draw_total = max(0.001, p_home + p_away)
+                p_home = (p_home / non_draw_total) * remaining
+                p_away = (p_away / non_draw_total) * remaining
+                p_draw = min_draw
+
+        total = p_home + p_draw + p_away
+        return {
+            "H": p_home / total,
+            "D": p_draw / total,
+            "A": p_away / total,
+        }
+
+    def _build_context_explanation(self, impact: dict[str, float | int]) -> dict[str, str]:
+        table_total = float(impact.get("table_total_shift", 0.0) or 0.0)
+        injury_shift = float(impact.get("injury_shift", 0.0) or 0.0)
+        weather_severity = float(impact.get("weather_severity", 0.0) or 0.0)
+        elo_shift = float(impact.get("elo_shift", 0.0) or 0.0)
+        form_shift = float(impact.get("form_shift", 0.0) or 0.0)
+
+        drivers = {
+            "tabla": abs(table_total),
+            "lesiones": abs(injury_shift),
+            "clima": abs(weather_severity),
+            "elo": abs(elo_shift),
+            "forma": abs(form_shift),
+        }
+        main_driver = max(drivers, key=drivers.get)
+
+        explanations = {
+            "tabla": "La clasificación y el rendimiento acumulado de la temporada empujan el pronóstico.",
+            "lesiones": "Las bajas detectadas son el factor que más mueve este pronóstico.",
+            "clima": "El clima esperado está condicionando el partido y moderando el modelo.",
+            "elo": "La diferencia de fuerza ELO entre ambos equipos está influyendo en el pronóstico.",
+            "forma": "La forma reciente de los equipos es el factor más relevante en este partido.",
+        }
+        return {
+            "main_driver": main_driver,
+            "summary": explanations[main_driver],
+        }
+
+    def _apply_context_to_score_projection(
+        self,
+        score_projection: dict[str, float | str | list[dict[str, float | str]]],
+        weather: dict[str, str | float],
+        players_status: dict[str, str | list[dict[str, str]]],
+        home: str,
+        away: str,
+        table_shift: float,
+    ) -> dict[str, float | str | list[dict[str, float | str]]]:
+        expected_home = float(score_projection.get("expected_home", 1.0))
+        expected_away = float(score_projection.get("expected_away", 1.0))
+
+        weather_severity = self._context_weather_severity(weather)
+        _, _, home_injury_load, away_injury_load = self._injury_counts(players_status, home, away)
+        _, injury_source_weight = self._players_source_reliability(players_status)
+
+        weather_goal_factor = max(0.82, 1.0 - (weather_severity * 0.9))
+        home_injury_goal_factor = max(0.72, 1.0 - ((home_injury_load * 0.035) * injury_source_weight))
+        away_injury_goal_factor = max(0.72, 1.0 - ((away_injury_load * 0.035) * injury_source_weight))
+        home_table_goal_factor = max(0.86, min(1.14, 1.0 + (table_shift * 0.45)))
+        away_table_goal_factor = max(0.86, min(1.14, 1.0 - (table_shift * 0.45)))
+
+        adjusted_home = expected_home * weather_goal_factor * home_injury_goal_factor * home_table_goal_factor
+        adjusted_away = expected_away * weather_goal_factor * away_injury_goal_factor * away_table_goal_factor
+
+        return self._score_projection_from_expected(adjusted_home, adjusted_away)
 
     def _update_elo(self, elo_ratings: dict[str, float], match: pd.Series) -> None:
         K = 20
@@ -1077,28 +1588,7 @@ class MatchPredictionService:
         )
         expected_home += 0.06 * (home_stats["shots_on_target"] - away_stats["shots_on_target"])
         expected_away += 0.04 * (away_stats["shots_on_target"] - home_stats["shots_on_target"])
-        expected_home = min(max(expected_home, 0.2), 4.0)
-        expected_away = min(max(expected_away, 0.2), 4.0)
-
-        score_probabilities = []
-        for home_goals in range(6):
-            for away_goals in range(6):
-                home_prob = exp(-expected_home) * (expected_home ** home_goals) / factorial(home_goals)
-                away_prob = exp(-expected_away) * (expected_away ** away_goals) / factorial(away_goals)
-                score_probabilities.append(
-                    {
-                        "score": f"{home_goals}-{away_goals}",
-                        "probability": round(home_prob * away_prob * 100, 2),
-                    }
-                )
-        score_probabilities.sort(key=lambda item: item["probability"], reverse=True)
-        return {
-            "expected_home": round(expected_home, 2),
-            "expected_away": round(expected_away, 2),
-            "total_expected": round(expected_home + expected_away, 2),
-            "best_score": score_probabilities[0]["score"],
-            "top_scores": score_probabilities[:3],
-        }
+        return self._score_projection_from_expected(expected_home, expected_away)
 
     def _market_probabilities(self, class_map: dict[str, float], score_projection: dict[str, float | str | list[dict[str, float | str]]], home_stats: dict[str, float], away_stats: dict[str, float]) -> dict[str, object]:
         p_home = float(class_map.get("H", 0.0))
@@ -1476,20 +1966,48 @@ class MatchPredictionService:
         probabilities = self.model.predict_proba(feature_frame)[0]
         class_map = dict(zip(self.label_encoder.classes_, probabilities))
 
+        weather = self._weather_context(home, match["fecha"], match["hora"])
+        players_status = self._players_context(home, away, str(match["fecha"]))
+        players_by_team = self._group_players_by_team(players_status, home, away)
+        home_table = self.standings_snapshot.get(home, {})
+        away_table = self.standings_snapshot.get(away, {})
+        class_map, context_impact = self._apply_context_adjustments(
+            class_map,
+            weather,
+            players_status,
+            home,
+            away,
+            home_table,
+            away_table,
+            home_stats,
+            away_stats,
+            home_elo,
+            away_elo,
+            home_streak,
+            away_streak,
+        )
+
         outcome_labels = {
             "H": "Gana local",
             "D": "Empate",
             "A": "Gana visitante",
         }
         top_label = max(class_map, key=class_map.get)
-        score_projection = self._predict_scoreline(home_stats, away_stats)
+        raw_score_projection = self._predict_scoreline(home_stats, away_stats)
+        score_projection = self._apply_context_to_score_projection(
+            raw_score_projection,
+            weather,
+            players_status,
+            home,
+            away,
+            float(context_impact.get("table_total_shift", 0.0)),
+        )
+        class_map = self._stabilize_probabilities(class_map, score_projection)
+        top_label = max(class_map, key=class_map.get)
         markets = self._market_probabilities(class_map, score_projection, home_stats, away_stats)
-        weather = self._weather_context(home, match["fecha"], match["hora"])
-        home_table = self.standings_snapshot.get(home, {})
-        away_table = self.standings_snapshot.get(away, {})
         kickoff_hour = int(str(match["hora"]).split(":")[0]) if ":" in str(match["hora"]) else 12
         kickoff_label = "Noche" if kickoff_hour >= 20 else "Tarde" if kickoff_hour >= 14 else "Mañana"
-        players_status = self._players_context(home, away, str(match["fecha"]))
+        context_explanation = self._build_context_explanation(context_impact)
         probabilities = {
             "local": round(class_map.get("H", 0.0) * 100, 2),
             "empate": round(class_map.get("D", 0.0) * 100, 2),
@@ -1538,6 +2056,9 @@ class MatchPredictionService:
                 "kickoff_period": kickoff_label,
                 "weather": weather,
                 "players": players_status,
+                "players_by_team": players_by_team,
+                "impact": context_impact,
+                "explanation": context_explanation,
             },
             "match_report": match_report,
             "categorized_bets": categorized_bets,
@@ -1549,6 +2070,47 @@ class MatchPredictionService:
                 "home_win_rate": round(h2h_stats["home_win_rate"] * 100),
                 "draw_rate": round(h2h_stats["draw_rate"] * 100),
             },
+        }
+
+    def predict_recommended_bet_fast(self, match_key: str) -> dict[str, object]:
+        """Prediccion ligera para listados: evita llamadas de contexto externo."""
+        match_df = self.fixtures_df[self.fixtures_df["match_key"] == match_key]
+        if match_df.empty:
+            raise ValueError("No se encontro el encuentro seleccionado.")
+
+        match = match_df.iloc[0]
+        home = match["local"]
+        away = match["visitante"]
+
+        home_stats = self._team_stats(home)
+        away_stats = self._team_stats(away)
+        home_elo = self.team_elo_snapshots.get(home, 1500.0)
+        away_elo = self.team_elo_snapshots.get(away, 1500.0)
+        home_streak = self.team_streak_snapshots.get(home, 0)
+        away_streak = self.team_streak_snapshots.get(away, 0)
+        h2h_stats = self._h2h_stats(self.h2h_history_snapshot, home, away)
+
+        features = self._build_features(
+            home_stats, away_stats, home_elo, away_elo, home_streak, away_streak, h2h_stats
+        )
+        feature_frame = pd.DataFrame([features], columns=FEATURE_COLUMNS)
+        probabilities_raw = self.model.predict_proba(feature_frame)[0]
+        class_map = dict(zip(self.label_encoder.classes_, probabilities_raw))
+
+        score_projection = self._predict_scoreline(home_stats, away_stats)
+        markets = self._market_probabilities(class_map, score_projection, home_stats, away_stats)
+        probabilities = {
+            "local": round(class_map.get("H", 0.0) * 100, 2),
+            "empate": round(class_map.get("D", 0.0) * 100, 2),
+            "visitante": round(class_map.get("A", 0.0) * 100, 2),
+        }
+        candidates = self._bet_candidates(probabilities, markets)
+        categorized_bets = self._categorized_bets(probabilities, markets)
+
+        return {
+            "recommended_bet": self._recommended_bet(candidates),
+            "probabilities": probabilities,
+            "multiple": categorized_bets["multiple"],
         }
 
 

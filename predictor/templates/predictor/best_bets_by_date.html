@@ -1,0 +1,391 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SistGoyPro | Encuentros de mayo</title>
+    <link rel="icon" type="image/jpeg" href="{% static 'predictor/brand/logo.jpg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-top: #0f3d28;
+            --bg-mid: #145433;
+            --bg-bottom: #0c281a;
+            --ink: #f2f7f3;
+            --muted: #a9c5b6;
+            --line: rgba(183, 221, 194, 0.18);
+            --panel: rgba(8, 42, 26, 0.78);
+            --accent: #f6cf55;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Source Sans 3", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 18% 14%, rgba(246, 207, 85, 0.18), transparent 32%),
+                radial-gradient(circle at 86% 8%, rgba(108, 227, 163, 0.17), transparent 26%),
+                linear-gradient(170deg, var(--bg-top) 0%, var(--bg-mid) 52%, var(--bg-bottom) 100%);
+            min-height: 100vh;
+        }
+
+        .shell {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: clamp(14px, 3vw, 24px);
+        }
+
+        .hero {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 220px;
+        }
+
+        .title-wrap img {
+            width: clamp(44px, 8vw, 56px);
+            height: clamp(44px, 8vw, 56px);
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        h1 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            font-size: clamp(1.5rem, 5vw, 2.2rem);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            line-height: 1.05;
+        }
+
+        .sub {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: clamp(0.8rem, 2vw, 0.95rem);
+        }
+
+        .link-back {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 9px;
+            border: 1px solid rgba(246, 207, 85, 0.35);
+            background: rgba(246, 207, 85, 0.12);
+            color: var(--accent);
+            text-decoration: none;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+        }
+
+        .link-back:hover {
+            background: rgba(246, 207, 85, 0.2);
+        }
+
+        .refresh-log {
+            display: grid;
+            gap: 8px;
+            margin: 0 0 16px;
+        }
+
+        .refresh-item {
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(5, 28, 18, 0.5);
+            border: 1px solid var(--line);
+            color: #bdeed2;
+            font-size: 0.92rem;
+        }
+
+        .entries {
+            display: grid;
+            gap: 14px;
+        }
+
+        .entry-card {
+            border-radius: 16px;
+            padding: clamp(12px, 3vw, 18px);
+            background: linear-gradient(150deg, rgba(10, 48, 30, 0.88), rgba(6, 28, 18, 0.94));
+            border: 1px solid var(--line);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            height: 38px;
+            padding: 0 10px;
+            border-radius: 11px;
+            background: rgba(246, 207, 85, 0.16);
+            border: 1px solid rgba(246, 207, 85, 0.3);
+            color: var(--accent);
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .entry-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .date-badge,
+        .league-chip,
+        .team {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.06);
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .date-badge {
+            background: rgba(246, 207, 85, 0.16);
+            border-color: rgba(246, 207, 85, 0.3);
+            color: var(--accent);
+        }
+
+        .league-chip img,
+        .team img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+        }
+
+        .teams {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .vs {
+            color: var(--accent);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+        }
+
+        .multiple-ticket {
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(108, 227, 163, 0.35);
+            background: linear-gradient(145deg, rgba(20, 70, 44, 0.92), rgba(8, 40, 24, 0.95));
+        }
+
+        .multi-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .multi-icon {
+            font-size: 1.1rem;
+        }
+
+        .multi-title {
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #d8f7e6;
+            font-size: 0.95rem;
+            font-weight: 700;
+            flex: 1;
+        }
+
+        .multi-conf-badge {
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: 1px solid rgba(108, 227, 163, 0.45);
+            color: #9cf0c4;
+            background: rgba(108, 227, 163, 0.16);
+        }
+
+        .multi-legs {
+            margin: 0 0 10px 0;
+            padding-left: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .multi-legs li {
+            font-size: 0.92rem;
+            color: #d7efe3;
+        }
+
+        .multi-footer {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .multi-footer span {
+            font-size: 0.82rem;
+            opacity: 0.85;
+        }
+
+        .multi-prob {
+            font-size: 1.8rem;
+            line-height: 1;
+            font-weight: 700;
+            color: #6ce3a3;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+        }
+
+        .cta {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 9px 12px;
+            border-radius: 9px;
+            border: 1px solid rgba(246, 207, 85, 0.35);
+            background: rgba(246, 207, 85, 0.14);
+            color: var(--accent);
+            text-decoration: none;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .cta:hover {
+            background: rgba(246, 207, 85, 0.22);
+        }
+
+        .empty {
+            padding: 20px;
+            border-radius: 12px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            color: #dcebe4;
+            text-align: center;
+        }
+
+        @media (max-width: 760px) {
+            .hero,
+            .entry-top,
+            .teams {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .shell {
+                padding: 12px 10px 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="hero">
+            <div class="title-wrap">
+                <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoyPro">
+                <div>
+                    <h1>Mejores apuestas por fecha</h1>
+                    <p class="sub">Todos los encuentros pendientes de {{ target_month_name }} {{ target_year }}, ordenados de mayor a menor por probabilidad combinada.</p>
+                </div>
+            </div>
+            <a class="link-back" href="/">Volver al dashboard</a>
+        </section>
+
+        <section class="refresh-log">
+            {% for item in refresh_log %}
+                <div class="refresh-item">{{ item }}</div>
+            {% endfor %}
+        </section>
+
+        {% if best_entries %}
+            <section class="entries">
+                {% for item in best_entries %}
+                    <article class="entry-card">
+                        <div class="entry-top">
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                <div class="rank-badge">#{{ forloop.counter }}</div>
+                                <div class="date-badge">{{ item.date_label }} | {{ item.kickoff }}</div>
+                            </div>
+                            <div class="league-chip">
+                                <img src="{{ item.league_logo_url }}" alt="{{ item.league_name }}">
+                                <span>{{ item.league_name }}</span>
+                            </div>
+                        </div>
+
+                        <div class="teams">
+                            <div class="team">
+                                {% if item.home_logo %}<img src="{{ item.home_logo }}" alt="{{ item.home_team }}">{% endif %}
+                                <span>{{ item.home_team }}</span>
+                            </div>
+                            <span class="vs">vs</span>
+                            <div class="team">
+                                {% if item.away_logo %}<img src="{{ item.away_logo }}" alt="{{ item.away_team }}">{% endif %}
+                                <span>{{ item.away_team }}</span>
+                            </div>
+                        </div>
+
+                        <div class="multiple-ticket">
+                            <div class="multi-header">
+                                <span class="multi-icon">🅃</span>
+                                <span class="multi-title">Apuesta múltiple — Solo selecciones Alta confianza</span>
+                                <span class="multi-conf-badge">{{ item.multiple_confidence }}</span>
+                            </div>
+                            {% if item.multiple_legs %}
+                                <ul class="multi-legs">
+                                    {% for leg in item.multiple_legs %}
+                                        <li>{{ leg }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="multi-footer">
+                                    <span>Probabilidad combinada:</span>
+                                    <strong class="multi-prob">{{ item.multiple_combined_probability_text }}%</strong>
+                                </div>
+                            {% else %}
+                                <p style="opacity:0.75;font-size:0.9rem;margin:8px 0 0">Sin selecciones de alta confianza para combinar en este encuentro.</p>
+                            {% endif %}
+                        </div>
+
+                        <a class="cta" href="{{ item.dashboard_url }}">Abrir encuentro</a>
+                    </article>
+                {% endfor %}
+            </section>
+        {% else %}
+            <div class="empty">No hay encuentros pendientes de {{ target_month_name }} {{ target_year }} o no fue posible calcular recomendaciones.</div>
+        {% endif %}
+    </div>
+</body>
+</html>
