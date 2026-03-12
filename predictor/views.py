@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from io import BytesIO
+import re
 
 from django.shortcuts import render
 from django.http import HttpResponse
@@ -39,6 +40,67 @@ def _parse_fixture_date(value: str):
 		except ValueError:
 			continue
 	return None
+
+
+def _extract_leg_probability(leg: object) -> float | None:
+	if not isinstance(leg, str):
+		return None
+	match = re.search(r"\(([0-9]+(?:\.[0-9]+)?)%\)", leg)
+	if not match:
+		return None
+	try:
+		return float(match.group(1))
+	except ValueError:
+		return None
+
+
+def _legs_with_probabilities(legs: list[object]) -> list[tuple[str, float]]:
+	parsed: list[tuple[str, float]] = []
+	for leg in legs:
+		if not isinstance(leg, str):
+			continue
+		leg_prob = _extract_leg_probability(leg)
+		if leg_prob is None:
+			continue
+		parsed.append((leg, leg_prob))
+	return parsed
+
+
+def _top_two_legs(legs: list[object]) -> list[str]:
+	parsed = _legs_with_probabilities(legs)
+	top_two = sorted(parsed, key=lambda item: item[1], reverse=True)[:2]
+	return [leg for leg, _ in top_two]
+
+
+def _legs_without_cards_corners(legs: list[object]) -> list[str]:
+	filtered: list[str] = []
+	for leg, _ in _legs_with_probabilities(legs):
+		leg_lower = leg.lower()
+		if any(token in leg_lower for token in ("tarjetas", "amarillas", "corners", "córners")):
+			continue
+		filtered.append(leg)
+	return filtered
+
+
+def _combined_top_two_probability(legs: list[object]) -> float:
+	probs = [p for _, p in _legs_with_probabilities(legs)]
+	if len(probs) < 2:
+		return 0.0
+	probs = sorted(probs, reverse=True)[:2]
+	combined = (probs[0] / 100.0) * (probs[1] / 100.0)
+	return round(combined * 100, 2)
+
+
+def _combined_without_cards_corners_probability(legs: list[object]) -> float:
+	probs = [p for _, p in _legs_with_probabilities(_legs_without_cards_corners(legs))]
+
+	if not probs:
+		return 0.0
+
+	combined = 1.0
+	for prob in probs:
+		combined *= prob / 100.0
+	return round(combined * 100, 2)
 
 
 def dashboard(request):
@@ -137,7 +199,12 @@ def best_bets_by_date(request):
 
 		recommended = prediction["recommended_bet"]
 		multiple = prediction.get("multiple", {})
+		multiple_legs = list(multiple.get("legs", []))
+		top_two_legs = _top_two_legs(multiple_legs)
+		no_cards_corners_legs = _legs_without_cards_corners(multiple_legs)
 		combined_probability = float(multiple.get("prob_combinada", 0.0))
+		top_two_combined_probability = _combined_top_two_probability(multiple_legs)
+		no_cards_corners_probability = _combined_without_cards_corners_probability(multiple_legs)
 		date_label = str(fixture["fecha"])
 		entry = {
 			"date_label": date_label,
@@ -156,16 +223,29 @@ def best_bets_by_date(request):
 			"probability": float(recommended["probability"]),
 			"confidence": str(recommended["confidence"]),
 			"multiple_confidence": str(multiple.get("confidence", "Sin selecciones")),
-			"multiple_legs": list(multiple.get("legs", [])),
+			"multiple_legs": multiple_legs,
+			"multiple_legs_general": multiple_legs,
+			"multiple_legs_top2": top_two_legs,
+			"multiple_legs_no_cards_corners": no_cards_corners_legs,
 			"multiple_combined_probability": combined_probability,
 			"multiple_combined_probability_text": f"{combined_probability:.2f}".replace(".", ","),
+			"multiple_top2_combined_probability": top_two_combined_probability,
+			"multiple_top2_combined_probability_text": f"{top_two_combined_probability:.2f}".replace(".", ","),
+			"multiple_no_cards_corners_probability": no_cards_corners_probability,
+			"multiple_no_cards_corners_probability_text": f"{no_cards_corners_probability:.2f}".replace(".", ","),
 			"dashboard_url": f"/?liga={liga}&match_key={fixture['match_key']}",
 		}
 		best_entries.append(entry)
 
 	best_entries = sorted(
 		best_entries,
-		key=lambda item: (item["sort_date"], -float(item["multiple_combined_probability"]), item["kickoff"]),
+		key=lambda item: (
+			item["sort_date"],
+			-float(item.get("multiple_no_cards_corners_probability", 0.0)),
+			-float(item.get("multiple_top2_combined_probability", 0.0)),
+			-float(item["multiple_combined_probability"]),
+			item["kickoff"],
+		),
 	)
 
 	date_groups: list[dict[str, object]] = []
@@ -226,7 +306,12 @@ def best_bets_pdf(request):
 
 		recommended = prediction["recommended_bet"]
 		multiple = prediction.get("multiple", {})
+		multiple_legs = list(multiple.get("legs", []))
+		top_two_legs = _top_two_legs(multiple_legs)
+		no_cards_corners_legs = _legs_without_cards_corners(multiple_legs)
 		combined_probability = float(multiple.get("prob_combinada", 0.0))
+		top_two_combined_probability = _combined_top_two_probability(multiple_legs)
+		no_cards_corners_probability = _combined_without_cards_corners_probability(multiple_legs)
 		date_label = str(fixture["fecha"])
 		entry = {
 			"date_label": date_label,
@@ -236,14 +321,27 @@ def best_bets_pdf(request):
 			"away_team": str(fixture["visitante"]),
 			"kickoff": str(fixture["hora"]),
 			"multiple_confidence": str(multiple.get("confidence", "Sin selecciones")),
-			"multiple_legs": list(multiple.get("legs", [])),
+			"multiple_legs": multiple_legs,
+			"multiple_legs_general": multiple_legs,
+			"multiple_legs_top2": top_two_legs,
+			"multiple_legs_no_cards_corners": no_cards_corners_legs,
+			"multiple_combined_probability": combined_probability,
 			"multiple_combined_probability_text": f"{combined_probability:.2f}".replace(".", ","),
+			"multiple_top2_combined_probability": top_two_combined_probability,
+			"multiple_top2_combined_probability_text": f"{top_two_combined_probability:.2f}".replace(".", ","),
+			"multiple_no_cards_corners_probability": no_cards_corners_probability,
+			"multiple_no_cards_corners_probability_text": f"{no_cards_corners_probability:.2f}".replace(".", ","),
 		}
 		best_entries.append(entry)
 
 	best_entries = sorted(
 		best_entries,
-		key=lambda item: (item["sort_date"], -float(item["multiple_combined_probability_text"].replace(",", "."))),
+		key=lambda item: (
+			item["sort_date"],
+			-float(item.get("multiple_no_cards_corners_probability", 0.0)),
+			-float(item.get("multiple_top2_combined_probability", 0.0)),
+			-float(item["multiple_combined_probability"]),
+		),
 	)
 
 	# Crear PDF
@@ -357,7 +455,25 @@ def best_bets_pdf(request):
 		# Detalles de cada encuentro en cuadros
 		for idx, item in enumerate(group_items, 1):
 			matchup = f"{item['home_team']} vs {item['away_team']}"
-			
+
+			# Colores según nivel de confianza (Alta=verde, Media=amarillo, Baja=naranja)
+			_conf = item['multiple_confidence']
+			if _conf == 'Alta':
+				conf_accent = colors.HexColor("#1a7d5c")
+				conf_bg = colors.HexColor("#d4f0e8")
+				conf_text_hex = "#1a7d5c"
+				conf_border = colors.HexColor("#52c99b")
+			elif _conf == 'Media':
+				conf_accent = colors.HexColor("#8a7010")
+				conf_bg = colors.HexColor("#f5ecc0")
+				conf_text_hex = "#8a7010"
+				conf_border = colors.HexColor("#c9a82a")
+			else:
+				conf_accent = colors.HexColor("#8a3a1a")
+				conf_bg = colors.HexColor("#f5d0b8")
+				conf_text_hex = "#8a3a1a"
+				conf_border = colors.HexColor("#c96c42")
+
 			# Cuadro principal del partido
 			main_data = [
 				[
@@ -377,84 +493,103 @@ def best_bets_pdf(request):
 			story.append(main_table)
 			story.append(Spacer(1, 0.08*inch))
 
-			# Cuadro de apuesta múltiple
+			# Cabecera del ticket múltiple con badge de confianza
 			multi_header = [
-				[Paragraph("🅃 <b>APUESTA MÚLTIPLE — SOLO SELECCIONES ALTA CONFIANZA</b>", confidence_style)]
-			]
-			multi_header_table = Table(multi_header, colWidths=[7.5*inch])
-			multi_header_table.setStyle(TableStyle([
-				("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#d4f0e8")),
-				("BORDER", (0, 0), (-1, -1), 2, colors.HexColor("#1a7d5c")),
-				("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#0f3d28")),
-				("ALIGN", (0, 0), (-1, -1), "LEFT"),
-				("PADDING", (0, 0), (-1, -1), 8),
-				("LEFTPADDING", (0, 0), (-1, -1), 10),
-			]))
-			story.append(multi_header_table)
-			story.append(Spacer(1, 0.05*inch))
-
-			# Confianza
-			confidence_data = [
 				[
-					Paragraph("<b>Confianza:</b>", label_style),
-					Paragraph(item['multiple_confidence'], confidence_style),
+					Paragraph("🅃 <b>APUESTA MÚLTIPLE — SOLO SELECCIONES ALTA CONFIANZA</b>", confidence_style),
+					Paragraph(f'<font color="{conf_text_hex}"><b>{item["multiple_confidence"]}</b></font>', confidence_style),
 				]
 			]
-			confidence_table = Table(confidence_data, colWidths=[2*inch, 5.5*inch])
-			confidence_table.setStyle(TableStyle([
-				("BACKGROUND", (0, 0), (-1, -1), colors.white),
-				("BORDER", (0, 0), (-1, -1), 1, colors.HexColor("#b3d9cc")),
+			multi_header_table = Table(multi_header, colWidths=[6.2*inch, 1.3*inch])
+			multi_header_table.setStyle(TableStyle([
+				("BACKGROUND", (0, 0), (-1, -1), conf_bg),
+				("BORDER", (0, 0), (-1, -1), 2, conf_accent),
 				("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#0f3d28")),
 				("ALIGN", (0, 0), (0, -1), "LEFT"),
-				("PADDING", (0, 0), (-1, -1), 6),
-				("LEFTPADDING", (0, 0), (-1, -1), 10),
+				("ALIGN", (1, 0), (1, -1), "RIGHT"),
+				("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+				("PADDING", (0, 0), (-1, -1), 8),
+				("LEFTPADDING", (0, 0), (0, -1), 10),
+				("RIGHTPADDING", (1, 0), (1, -1), 10),
 			]))
-			story.append(confidence_table)
-			story.append(Spacer(1, 0.05*inch))
+			story.append(multi_header_table)
+			story.append(Spacer(1, 0.06*inch))
 
-			# Piernas/Selecciones
+			# --- Grid de 3 columnas (igual que el HTML) ---
 			if item["multiple_legs"]:
-				legs_header = [[Paragraph("<b>Selecciones:</b>", label_style)]]
-				legs_header_table = Table(legs_header, colWidths=[7.5*inch])
-				legs_header_table.setStyle(TableStyle([
-					("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#e8f5f0")),
-					("BORDER", (0, 0), (-1, -1), 1, colors.HexColor("#b3d9cc")),
-					("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#0f3d28")),
-					("PADDING", (0, 0), (-1, -1), 6),
+				def _metric_bg_border(prob):
+					if prob >= 75.0:
+						return (colors.HexColor("#c8f0dc"), colors.HexColor("#52c99b"), colors.HexColor("#0f5c30"), colors.HexColor("#083d1e"))
+					elif prob >= 62.0:
+						return (colors.HexColor("#f5ecc0"), colors.HexColor("#c9a82a"), colors.HexColor("#7a6000"), colors.HexColor("#4a3800"))
+					else:
+						return (colors.HexColor("#f5d0b8"), colors.HexColor("#c96c42"), colors.HexColor("#7a3010"), colors.HexColor("#4a1e08"))
+
+				col_defs = [
+					("Opción 1 · Sin tarjetas/corners",
+					 item["multiple_no_cards_corners_probability_text"],
+					 float(item["multiple_no_cards_corners_probability"]),
+					 item["multiple_legs_no_cards_corners"]),
+					("Opción 2 · Combinada (2 mejores)",
+					 item["multiple_top2_combined_probability_text"],
+					 float(item["multiple_top2_combined_probability"]),
+					 item["multiple_legs_top2"]),
+					("Opción 3 · Probabilidad general",
+					 item["multiple_combined_probability_text"],
+					 float(item["multiple_combined_probability"]),
+					 item["multiple_legs_general"]),
+				]
+				COL_W = 2.45 * inch
+				cells_row = []
+				bg_cols = []
+				border_cols = []
+				for col_title, prob_text, prob_raw, legs in col_defs:
+					cbg, cborder, ctitle_c, cvalue_c = _metric_bg_border(prob_raw)
+					bg_cols.append(cbg)
+					border_cols.append(cborder)
+					m_title_st = ParagraphStyle("MT", parent=styles["Normal"], fontName="Helvetica-Bold",
+												 fontSize=7, leading=9, textColor=ctitle_c, spaceAfter=3)
+					m_value_st = ParagraphStyle("MV", parent=styles["Normal"], fontName="Helvetica-Bold",
+												 fontSize=16, leading=18, textColor=cvalue_c, spaceAfter=4)
+					m_leg_st = ParagraphStyle("ML", parent=styles["Normal"], fontName="Helvetica",
+											   fontSize=7, leading=9, textColor=ctitle_c, spaceAfter=1)
+					cell = [
+						Paragraph(col_title.upper(), m_title_st),
+						Paragraph(f"{prob_text}%", m_value_st),
+					]
+					if legs:
+						for leg in legs:
+							cell.append(Paragraph(f"\u2022 {leg}", m_leg_st))
+					else:
+						cell.append(Paragraph("Sin selecciones válidas", m_leg_st))
+					cells_row.append(cell)
+
+				metrics_table = Table([cells_row], colWidths=[COL_W, COL_W, COL_W])
+				ts_cmds = [
+					("VALIGN", (0, 0), (-1, -1), "TOP"),
+					("TOPPADDING", (0, 0), (-1, -1), 8),
+					("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+					("LEFTPADDING", (0, 0), (-1, -1), 8),
+					("RIGHTPADDING", (0, 0), (-1, -1), 8),
+				]
+				for ci, (cbg, cborder) in enumerate(zip(bg_cols, border_cols)):
+					ts_cmds.extend([
+						("BACKGROUND", (ci, 0), (ci, 0), cbg),
+						("BOX", (ci, 0), (ci, 0), 1.5, cborder),
+					])
+				metrics_table.setStyle(TableStyle(ts_cmds))
+				story.append(metrics_table)
+			else:
+				no_sel_data = [[Paragraph("Ninguna selección supera el 75% de confianza en este partido.", value_style)]]
+				no_sel_table = Table(no_sel_data, colWidths=[7.5*inch])
+				no_sel_table.setStyle(TableStyle([
+					("BACKGROUND", (0, 0), (-1, -1), colors.white),
+					("BORDER", (0, 0), (-1, -1), 1, conf_border),
+					("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#555555")),
+					("PADDING", (0, 0), (-1, -1), 8),
 					("LEFTPADDING", (0, 0), (-1, -1), 10),
 				]))
-				story.append(legs_header_table)
-
-				for leg in item["multiple_legs"]:
-					leg_data = [[Paragraph(f"• {leg}", value_style)]]
-					leg_table = Table(leg_data, colWidths=[7.5*inch])
-					leg_table.setStyle(TableStyle([
-						("BACKGROUND", (0, 0), (-1, -1), colors.white),
-						("BORDER", (0, 0), (-1, -1), 1, colors.HexColor("#d4f0e8")),
-						("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#0f3d28")),
-						("PADDING", (0, 0), (-1, -1), 5),
-						("LEFTPADDING", (0, 0), (-1, -1), 15),
-					]))
-					story.append(leg_table)
-				story.append(Spacer(1, 0.05*inch))
-
-			# Probabilidad combinada (destacada)
-			prob_data = [
-				[Paragraph(f"<b>Probabilidad combinada:</b>", label_style)],
-				[Paragraph(f"{item['multiple_combined_probability_text']}%", prob_style)],
-			]
-			prob_table = Table(prob_data, colWidths=[7.5*inch])
-			prob_table.setStyle(TableStyle([
-				("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a7d5c")),
-				("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#d4f0e8")),
-				("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-				("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#0f3d28")),
-				("BORDER", (0, 0), (-1, -1), 2.5, colors.HexColor("#1a7d5c")),
-				("ALIGN", (0, 0), (-1, -1), "CENTER"),
-				("PADDING", (0, 0), (-1, -1), 10),
-				("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-			]))
-			story.append(prob_table)
+				story.append(no_sel_table)
 			story.append(Spacer(1, 0.2*inch))
 
 	# Generar PDF

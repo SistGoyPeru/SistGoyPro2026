@@ -295,16 +295,97 @@
             color: #d7efe3;
         }
 
-        .multi-footer {
-            display: flex;
-            align-items: baseline;
+        .multi-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 8px;
-            flex-wrap: wrap;
+            margin-top: 8px;
         }
 
-        .multi-footer span {
-            font-size: 0.82rem;
-            opacity: 0.85;
+        .multi-metric {
+            border-radius: 10px;
+            padding: 8px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(5, 25, 15, 0.45);
+        }
+
+        .multi-metric-title {
+            display: block;
+            font-size: 0.74rem;
+            line-height: 1.25;
+            opacity: 0.9;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 700;
+        }
+
+        .multi-metric-value {
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            font-size: 1.45rem;
+            line-height: 1;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .multi-metric-legs {
+            margin: 0;
+            padding-left: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .multi-metric-legs li {
+            font-size: 0.8rem;
+            line-height: 1.3;
+            color: #e8f4ed;
+            opacity: 0.92;
+        }
+
+        .multi-metric-empty {
+            font-size: 0.78rem;
+            opacity: 0.72;
+        }
+
+        .metric-general {
+            border-color: rgba(108, 227, 163, 0.35);
+            background: rgba(108, 227, 163, 0.1);
+        }
+
+        .metric-general .multi-metric-title { color: #c9f7df; }
+        .metric-general .multi-metric-value { color: #9cf0c4; }
+
+        .metric-top2 {
+            border-color: rgba(246, 207, 85, 0.45);
+            background: rgba(246, 207, 85, 0.12);
+        }
+
+        .metric-top2 .multi-metric-title { color: #ffdf7d; }
+        .metric-top2 .multi-metric-value { color: #ffe79e; }
+
+        .metric-no-cards {
+            border-color: rgba(147, 193, 255, 0.45);
+            background: rgba(147, 193, 255, 0.12);
+        }
+
+        .metric-no-cards .multi-metric-title { color: #cfe4ff; }
+        .metric-no-cards .multi-metric-value { color: #e2efff; }
+
+        .multi-metric.metric-level-alta {
+            border-color: rgba(108, 227, 163, 0.55) !important;
+            background: rgba(108, 227, 163, 0.18) !important;
+        }
+
+        .multi-metric.metric-level-media {
+            border-color: rgba(246, 207, 85, 0.55) !important;
+            background: rgba(246, 207, 85, 0.18) !important;
+        }
+
+        .multi-metric.metric-level-baja {
+            border-color: rgba(242, 139, 90, 0.55) !important;
+            background: rgba(242, 139, 90, 0.16) !important;
         }
 
         .multi-prob {
@@ -356,6 +437,10 @@
             .teams {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+
+            .multi-metrics {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -427,14 +512,46 @@
                                         <span class="multi-conf-badge {% if item.multiple_confidence == 'Alta' %}badge-alta{% elif item.multiple_confidence == 'Media' %}badge-media{% else %}badge-baja{% endif %}">{{ item.multiple_confidence }}</span>
                                     </div>
                                     {% if item.multiple_legs %}
-                                        <ul class="multi-legs">
-                                            {% for leg in item.multiple_legs %}
-                                                <li>{{ leg }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                        <div class="multi-footer">
-                                            <span>Probabilidad combinada:</span>
-                                            <strong class="multi-prob {% if item.multiple_confidence == 'Alta' %}prob-alta{% elif item.multiple_confidence == 'Media' %}prob-media{% else %}prob-baja{% endif %}">{{ item.multiple_combined_probability_text }}%</strong>
+                                        <div class="multi-metrics">
+                                            <div class="multi-metric metric-no-cards {% if item.multiple_no_cards_corners_probability >= 75 %}metric-level-alta{% elif item.multiple_no_cards_corners_probability >= 62 %}metric-level-media{% else %}metric-level-baja{% endif %}">
+                                                <span class="multi-metric-title">Opción 1 · Sin tarjetas ni corners</span>
+                                                <strong class="multi-metric-value">{{ item.multiple_no_cards_corners_probability_text }}%</strong>
+                                                {% if item.multiple_legs_no_cards_corners %}
+                                                    <ul class="multi-metric-legs">
+                                                        {% for leg in item.multiple_legs_no_cards_corners %}
+                                                            <li>{{ leg }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <div class="multi-metric-empty">Sin selecciones válidas</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="multi-metric metric-top2 {% if item.multiple_top2_combined_probability >= 75 %}metric-level-alta{% elif item.multiple_top2_combined_probability >= 62 %}metric-level-media{% else %}metric-level-baja{% endif %}">
+                                                <span class="multi-metric-title">Opción 2 · Combinada (2 mejores)</span>
+                                                <strong class="multi-metric-value">{{ item.multiple_top2_combined_probability_text }}%</strong>
+                                                {% if item.multiple_legs_top2 %}
+                                                    <ul class="multi-metric-legs">
+                                                        {% for leg in item.multiple_legs_top2 %}
+                                                            <li>{{ leg }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <div class="multi-metric-empty">Sin 2 selecciones</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="multi-metric metric-general {% if item.multiple_combined_probability >= 75 %}metric-level-alta{% elif item.multiple_combined_probability >= 62 %}metric-level-media{% else %}metric-level-baja{% endif %}">
+                                                <span class="multi-metric-title">Opción 3 · Probabilidad combinada</span>
+                                                <strong class="multi-metric-value">{{ item.multiple_combined_probability_text }}%</strong>
+                                                {% if item.multiple_legs_general %}
+                                                    <ul class="multi-metric-legs">
+                                                        {% for leg in item.multiple_legs_general %}
+                                                            <li>{{ leg }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <div class="multi-metric-empty">Sin selecciones</div>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     {% else %}
                                         <p style="opacity:0.6;font-size:0.88rem;margin:8px 0 0">Ninguna selección supera el 75% de confianza en este partido.</p>
