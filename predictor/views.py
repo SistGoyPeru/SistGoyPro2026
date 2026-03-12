@@ -251,31 +251,83 @@ def best_bets_pdf(request):
 	doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=0.5*inch, leftMargin=0.5*inch, topMargin=0.5*inch, bottomMargin=0.5*inch)
 	story = []
 
-	# Estilos
+	# Estilos personalizados para mejor diseño
 	styles = getSampleStyleSheet()
 	title_style = ParagraphStyle(
 		"CustomTitle",
 		parent=styles["Heading1"],
-		fontSize=18,
+		fontName="Helvetica-Bold",
+		fontSize=24,
 		textColor=colors.HexColor("#0f3d28"),
-		spaceAfter=10,
+		spaceAfter=6,
 		alignment=1,
 	)
-
-	date_style = ParagraphStyle(
+	subtitle_style = ParagraphStyle(
+		"Subtitle",
+		parent=styles["Normal"],
+		fontName="Helvetica",
+		fontSize=10,
+		textColor=colors.HexColor("#1a7d5c"),
+		spaceAfter=20,
+		alignment=1,
+	)
+	date_header_style = ParagraphStyle(
 		"DateHeader",
 		parent=styles["Heading2"],
-		fontSize=14,
-		textColor=colors.HexColor("#145433"),
-		spaceAfter=8,
+		fontName="Helvetica-Bold",
+		fontSize=13,
+		textColor=colors.white,
+		spaceAfter=10,
 		spaceBefore=12,
 	)
+	match_header_style = ParagraphStyle(
+		"MatchHeader",
+		parent=styles["Heading3"],
+		fontName="Helvetica-Bold",
+		fontSize=11,
+		textColor=colors.HexColor("#0f3d28"),
+		spaceAfter=5,
+	)
+	label_style = ParagraphStyle(
+		"Label",
+		parent=styles["Normal"],
+		fontName="Helvetica-Bold",
+		fontSize=9,
+		textColor=colors.HexColor("#145433"),
+		spaceAfter=3,
+	)
+	value_style = ParagraphStyle(
+		"Value",
+		parent=styles["Normal"],
+		fontName="Helvetica",
+		fontSize=9,
+		textColor=colors.black,
+		spaceAfter=2,
+	)
+	confidence_style = ParagraphStyle(
+		"Confidence",
+		parent=styles["Normal"],
+		fontName="Helvetica-Bold",
+		fontSize=10,
+		textColor=colors.HexColor("#1a7d5c"),
+		spaceAfter=4,
+	)
+	prob_style = ParagraphStyle(
+		"Probability",
+		parent=styles["Normal"],
+		fontName="Helvetica-Bold",
+		fontSize=12,
+		textColor=colors.HexColor("#1a7d5c"),
+		spaceAfter=0,
+	)
 
-	# Título
-	story.append(Paragraph("MEJORES APUESTAS POR FECHA", title_style))
+	# Calcular etiqueta de ventana
 	window_label = f"{window_start.strftime('%d/%m/%Y')} al {window_end.strftime('%d/%m/%Y')}"
-	story.append(Paragraph(f"Ventana: {window_label}", styles["Normal"]))
-	story.append(Spacer(1, 0.3*inch))
+
+	# Título principal
+	story.append(Paragraph("MEJORES APUESTAS POR FECHA", title_style))
+	story.append(Paragraph(f"Ventana: {window_label}", subtitle_style))
+	story.append(Spacer(1, 0.15*inch))
 
 	# Agrupar por fecha
 	date_groups_dict = {}
@@ -285,39 +337,125 @@ def best_bets_pdf(request):
 			date_groups_dict[date_key] = []
 		date_groups_dict[date_key].append(entry)
 
-	# Generar tabla por fecha
+	# Generar contenido profesional por fecha
 	for date_label in sorted(date_groups_dict.keys()):
 		group_items = date_groups_dict[date_label]
-		story.append(Paragraph(f"Fecha: {date_label}", date_style))
+		
+		# Cabecera de fecha con fondo de color
+		date_header_table = Table([
+			[Paragraph(f"📅 FECHA: {date_label}", date_header_style)]
+		], colWidths=[7.5*inch])
+		date_header_table.setStyle(TableStyle([
+			("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1a7d5c")),
+			("ALIGN", (0, 0), (-1, -1), "LEFT"),
+			("PADDING", (0, 0), (-1, -1), 10),
+			("LEFTPADDING", (0, 0), (-1, -1), 15),
+		]))
+		story.append(date_header_table)
+		story.append(Spacer(1, 0.1*inch))
 
-		# Detalles de cada encuentro
+		# Detalles de cada encuentro en cuadros
 		for idx, item in enumerate(group_items, 1):
-			# Encabezado del partido
 			matchup = f"{item['home_team']} vs {item['away_team']}"
-			partido_text = f"<b>#{idx} - {item['kickoff']} | {matchup}</b><br/><i>Liga: {item['league_name']}</i>"
-			story.append(Paragraph(partido_text, styles["Normal"]))
-			story.append(Spacer(1, 0.1*inch))
+			
+			# Cuadro principal del partido
+			main_data = [
+				[
+					Paragraph(f"<b>#{idx}</b>", styles["Normal"]),
+					Paragraph(f"<b>{matchup}</b><br/><font size=8>{item['league_name']} • {item['kickoff']}</font>", match_header_style),
+				]
+			]
+			main_table = Table(main_data, colWidths=[0.6*inch, 6.9*inch])
+			main_table.setStyle(TableStyle([
+				("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#e8f5f0")),
+				("BORDER", (0, 0), (-1, -1), 1.5, colors.HexColor("#1a7d5c")),
+				("ALIGN", (0, 0), (0, -1), "CENTER"),
+				("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+				("PADDING", (0, 0), (-1, -1), 8),
+				("LEFTPADDING", (1, 0), (1, -1), 12),
+			]))
+			story.append(main_table)
+			story.append(Spacer(1, 0.08*inch))
 
-			# Detalles de la apuesta múltiple
-			multi_text = f"<b>🅃 Apuesta múltiple — Solo selecciones Alta confianza</b><br/>"
-			multi_text += f"Confianza: <b>{item['multiple_confidence']}</b><br/>"
-			story.append(Paragraph(multi_text, styles["Normal"]))
+			# Cuadro de apuesta múltiple
+			multi_header = [
+				[Paragraph("🅃 <b>APUESTA MÚLTIPLE — SOLO SELECCIONES ALTA CONFIANZA</b>", confidence_style)]
+			]
+			multi_header_table = Table(multi_header, colWidths=[7.5*inch])
+			multi_header_table.setStyle(TableStyle([
+				("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#d4f0e8")),
+				("BORDER", (0, 0), (-1, -1), 2, colors.HexColor("#1a7d5c")),
+				("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#0f3d28")),
+				("ALIGN", (0, 0), (-1, -1), "LEFT"),
+				("PADDING", (0, 0), (-1, -1), 8),
+				("LEFTPADDING", (0, 0), (-1, -1), 10),
+			]))
+			story.append(multi_header_table)
+			story.append(Spacer(1, 0.05*inch))
 
-			# Piernas/Legs
+			# Confianza
+			confidence_data = [
+				[
+					Paragraph("<b>Confianza:</b>", label_style),
+					Paragraph(item['multiple_confidence'], confidence_style),
+				]
+			]
+			confidence_table = Table(confidence_data, colWidths=[2*inch, 5.5*inch])
+			confidence_table.setStyle(TableStyle([
+				("BACKGROUND", (0, 0), (-1, -1), colors.white),
+				("BORDER", (0, 0), (-1, -1), 1, colors.HexColor("#b3d9cc")),
+				("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#0f3d28")),
+				("ALIGN", (0, 0), (0, -1), "LEFT"),
+				("PADDING", (0, 0), (-1, -1), 6),
+				("LEFTPADDING", (0, 0), (-1, -1), 10),
+			]))
+			story.append(confidence_table)
+			story.append(Spacer(1, 0.05*inch))
+
+			# Piernas/Selecciones
 			if item["multiple_legs"]:
-				legs_text = "<b>Selecciones:</b><br/>"
+				legs_header = [[Paragraph("<b>Selecciones:</b>", label_style)]]
+				legs_header_table = Table(legs_header, colWidths=[7.5*inch])
+				legs_header_table.setStyle(TableStyle([
+					("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#e8f5f0")),
+					("BORDER", (0, 0), (-1, -1), 1, colors.HexColor("#b3d9cc")),
+					("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#0f3d28")),
+					("PADDING", (0, 0), (-1, -1), 6),
+					("LEFTPADDING", (0, 0), (-1, -1), 10),
+				]))
+				story.append(legs_header_table)
+
 				for leg in item["multiple_legs"]:
-					legs_text += f"• {leg}<br/>"
-				story.append(Paragraph(legs_text, styles["Normal"]))
-			else:
-				story.append(Paragraph("<i>Sin selecciones de alta confianza para combinar.</i>", styles["Normal"]))
+					leg_data = [[Paragraph(f"• {leg}", value_style)]]
+					leg_table = Table(leg_data, colWidths=[7.5*inch])
+					leg_table.setStyle(TableStyle([
+						("BACKGROUND", (0, 0), (-1, -1), colors.white),
+						("BORDER", (0, 0), (-1, -1), 1, colors.HexColor("#d4f0e8")),
+						("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#0f3d28")),
+						("PADDING", (0, 0), (-1, -1), 5),
+						("LEFTPADDING", (0, 0), (-1, -1), 15),
+					]))
+					story.append(leg_table)
+				story.append(Spacer(1, 0.05*inch))
 
-			# Probabilidad combinada
-			prob_text = f"<b>Probabilidad combinada: {item['multiple_combined_probability_text']}%</b>"
-			story.append(Paragraph(prob_text, styles["Normal"]))
-			story.append(Spacer(1, 0.15*inch))
-
-		story.append(Spacer(1, 0.25*inch))
+			# Probabilidad combinada (destacada)
+			prob_data = [
+				[Paragraph(f"<b>Probabilidad combinada:</b>", label_style)],
+				[Paragraph(f"{item['multiple_combined_probability_text']}%", prob_style)],
+			]
+			prob_table = Table(prob_data, colWidths=[7.5*inch])
+			prob_table.setStyle(TableStyle([
+				("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a7d5c")),
+				("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#d4f0e8")),
+				("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+				("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#0f3d28")),
+				("BORDER", (0, 0), (-1, -1), 2.5, colors.HexColor("#1a7d5c")),
+				("ALIGN", (0, 0), (-1, -1), "CENTER"),
+				("PADDING", (0, 0), (-1, -1), 10),
+				("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+			]))
+			story.append(prob_table)
+			story.append(Spacer(1, 0.2*inch))
 
 	# Generar PDF
 	doc.build(story)
