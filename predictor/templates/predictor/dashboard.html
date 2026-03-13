@@ -197,6 +197,7 @@
         .cat-market { font-size: clamp(0.68rem, 1.9vw, 0.78rem); opacity: 0.65; margin-top: 2px; }
         .cat-pick   { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-size: clamp(1.1rem, 3vw, 1.3rem); font-weight: 700; }
         .cat-prob   { font-size: clamp(1.3rem, 3.5vw, 1.5rem); font-weight: 700; line-height: 1.1; }
+        .cat-odd    { font-size: clamp(0.72rem, 2vw, 0.82rem); opacity: 0.82; }
         .cat-badge  { font-size: clamp(0.58rem, 1.6vw, 0.68rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
                       border-radius: 4px; padding: 2px 7px; width: fit-content; margin-top: 4px; }
 
@@ -1221,6 +1222,7 @@
                                 <div class="cat-market">{{ b.market }}</div>
                                 <div class="cat-pick">{{ b.pick }}</div>
                                 <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-odd">Cuota justa: {{ b.fair_odds|floatformat:2 }}</div>
                                 <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
                                     {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
                                 </div>
@@ -1233,6 +1235,7 @@
                                 <div class="cat-market">{{ b.market }}</div>
                                 <div class="cat-pick">{{ b.pick }}</div>
                                 <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-odd">Cuota justa: {{ b.fair_odds|floatformat:2 }}</div>
                                 <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
                                     {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
                                 </div>
@@ -1245,6 +1248,7 @@
                                 <div class="cat-market">{{ b.market }}</div>
                                 <div class="cat-pick">{{ b.pick }}</div>
                                 <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-odd">Cuota justa: {{ b.fair_odds|floatformat:2 }}</div>
                                 <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
                                     {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
                                 </div>
@@ -1257,6 +1261,7 @@
                                 <div class="cat-market">{{ b.market }}</div>
                                 <div class="cat-pick">{{ b.pick }}</div>
                                 <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-odd">Cuota justa: {{ b.fair_odds|floatformat:2 }}</div>
                                 <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
                                     {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
                                 </div>
@@ -1269,6 +1274,7 @@
                                 <div class="cat-market">{{ b.market }}</div>
                                 <div class="cat-pick">{{ b.pick }}</div>
                                 <div class="cat-prob">{{ b.prob }}%</div>
+                                <div class="cat-odd">Cuota justa: {{ b.fair_odds|floatformat:2 }}</div>
                                 <div class="cat-badge {% if b.prob >= 75 %}badge-alta{% elif b.prob >= 62 %}badge-media{% else %}badge-baja{% endif %}">
                                     {% if b.prob >= 75 %}Alta{% elif b.prob >= 62 %}Media{% else %}Baja{% endif %}
                                 </div>
@@ -1292,6 +1298,7 @@
                                 <div class="multi-footer">
                                     <span>Probabilidad combinada:</span>
                                     <strong class="multi-prob {% if m.confidence == 'Alta' %}prob-alta{% elif m.confidence == 'Media' %}prob-media{% else %}prob-baja{% endif %}">{{ m.prob_combinada }}%</strong>
+                                    <span>Cuota justa: {{ m.fair_odds|floatformat:2 }}</span>
                                 </div>
                             {% else %}
                                 <p style="opacity:0.6;font-size:0.88rem;margin:8px 0 0">Ninguna selección supera el 75% de confianza en este partido.</p>

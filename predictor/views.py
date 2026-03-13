@@ -109,6 +109,12 @@ def _combined_without_cards_corners_probability(legs: list[object]) -> float:
 	return round(combined * 100, 2)
 
 
+def _fair_odds(probability_pct: float) -> float:
+	if probability_pct <= 0:
+		return 0.0
+	return round(100.0 / probability_pct, 2)
+
+
 def dashboard(request):
 	liga = request.GET.get("liga") or request.POST.get("liga", "spain")
 	if liga not in ("spain", "bundesliga", "premier", "seriea", "ligue1", "primeiraliga", "proleague", "eredivisie"):
@@ -211,6 +217,9 @@ def best_bets_by_date(request):
 		combined_probability = float(multiple.get("prob_combinada", 0.0))
 		top_two_combined_probability = _combined_top_two_probability(multiple_legs)
 		no_cards_corners_probability = _combined_without_cards_corners_probability(multiple_legs)
+		combined_fair_odds = _fair_odds(combined_probability)
+		top_two_fair_odds = _fair_odds(top_two_combined_probability)
+		no_cards_corners_fair_odds = _fair_odds(no_cards_corners_probability)
 		date_label = str(fixture["fecha"])
 		entry = {
 			"date_label": date_label,
@@ -235,10 +244,16 @@ def best_bets_by_date(request):
 			"multiple_legs_no_cards_corners": no_cards_corners_legs,
 			"multiple_combined_probability": combined_probability,
 			"multiple_combined_probability_text": f"{combined_probability:.2f}".replace(".", ","),
+			"multiple_combined_fair_odds": combined_fair_odds,
+			"multiple_combined_fair_odds_text": f"{combined_fair_odds:.2f}".replace(".", ","),
 			"multiple_top2_combined_probability": top_two_combined_probability,
 			"multiple_top2_combined_probability_text": f"{top_two_combined_probability:.2f}".replace(".", ","),
+			"multiple_top2_combined_fair_odds": top_two_fair_odds,
+			"multiple_top2_combined_fair_odds_text": f"{top_two_fair_odds:.2f}".replace(".", ","),
 			"multiple_no_cards_corners_probability": no_cards_corners_probability,
 			"multiple_no_cards_corners_probability_text": f"{no_cards_corners_probability:.2f}".replace(".", ","),
+			"multiple_no_cards_corners_fair_odds": no_cards_corners_fair_odds,
+			"multiple_no_cards_corners_fair_odds_text": f"{no_cards_corners_fair_odds:.2f}".replace(".", ","),
 			"dashboard_url": f"/?liga={liga}&match_key={fixture['match_key']}",
 		}
 		best_entries.append(entry)
@@ -318,6 +333,9 @@ def best_bets_pdf(request):
 		combined_probability = float(multiple.get("prob_combinada", 0.0))
 		top_two_combined_probability = _combined_top_two_probability(multiple_legs)
 		no_cards_corners_probability = _combined_without_cards_corners_probability(multiple_legs)
+		combined_fair_odds = _fair_odds(combined_probability)
+		top_two_fair_odds = _fair_odds(top_two_combined_probability)
+		no_cards_corners_fair_odds = _fair_odds(no_cards_corners_probability)
 		date_label = str(fixture["fecha"])
 		entry = {
 			"date_label": date_label,
@@ -333,10 +351,16 @@ def best_bets_pdf(request):
 			"multiple_legs_no_cards_corners": no_cards_corners_legs,
 			"multiple_combined_probability": combined_probability,
 			"multiple_combined_probability_text": f"{combined_probability:.2f}".replace(".", ","),
+			"multiple_combined_fair_odds": combined_fair_odds,
+			"multiple_combined_fair_odds_text": f"{combined_fair_odds:.2f}".replace(".", ","),
 			"multiple_top2_combined_probability": top_two_combined_probability,
 			"multiple_top2_combined_probability_text": f"{top_two_combined_probability:.2f}".replace(".", ","),
+			"multiple_top2_combined_fair_odds": top_two_fair_odds,
+			"multiple_top2_combined_fair_odds_text": f"{top_two_fair_odds:.2f}".replace(".", ","),
 			"multiple_no_cards_corners_probability": no_cards_corners_probability,
 			"multiple_no_cards_corners_probability_text": f"{no_cards_corners_probability:.2f}".replace(".", ","),
+			"multiple_no_cards_corners_fair_odds": no_cards_corners_fair_odds,
+			"multiple_no_cards_corners_fair_odds_text": f"{no_cards_corners_fair_odds:.2f}".replace(".", ","),
 		}
 		best_entries.append(entry)
 
@@ -534,14 +558,17 @@ def best_bets_pdf(request):
 				col_defs = [
 					("Opción 1 · Sin tarjetas/corners",
 					 item["multiple_no_cards_corners_probability_text"],
+					 item["multiple_no_cards_corners_fair_odds_text"],
 					 float(item["multiple_no_cards_corners_probability"]),
 					 item["multiple_legs_no_cards_corners"]),
 					("Opción 2 · Combinada (2 mejores)",
 					 item["multiple_top2_combined_probability_text"],
+					 item["multiple_top2_combined_fair_odds_text"],
 					 float(item["multiple_top2_combined_probability"]),
 					 item["multiple_legs_top2"]),
 					("Opción 3 · Probabilidad general",
 					 item["multiple_combined_probability_text"],
+					 item["multiple_combined_fair_odds_text"],
 					 float(item["multiple_combined_probability"]),
 					 item["multiple_legs_general"]),
 				]
@@ -549,7 +576,7 @@ def best_bets_pdf(request):
 				cells_row = []
 				bg_cols = []
 				border_cols = []
-				for col_title, prob_text, prob_raw, legs in col_defs:
+				for col_title, prob_text, odds_text, prob_raw, legs in col_defs:
 					cbg, cborder, ctitle_c, cvalue_c = _metric_bg_border(prob_raw)
 					bg_cols.append(cbg)
 					border_cols.append(cborder)
@@ -557,11 +584,14 @@ def best_bets_pdf(request):
 												 fontSize=7, leading=9, textColor=ctitle_c, spaceAfter=3)
 					m_value_st = ParagraphStyle("MV", parent=styles["Normal"], fontName="Helvetica-Bold",
 												 fontSize=16, leading=18, textColor=cvalue_c, spaceAfter=4)
+					m_odds_st = ParagraphStyle("MO", parent=styles["Normal"], fontName="Helvetica-Bold",
+											 fontSize=8, leading=10, textColor=ctitle_c, spaceAfter=4)
 					m_leg_st = ParagraphStyle("ML", parent=styles["Normal"], fontName="Helvetica",
 											   fontSize=7, leading=9, textColor=ctitle_c, spaceAfter=1)
 					cell = [
 						Paragraph(col_title.upper(), m_title_st),
 						Paragraph(f"{prob_text}%", m_value_st),
+						Paragraph(f"Cuota justa: {odds_text}", m_odds_st),
 					]
 					if legs:
 						for leg in legs:

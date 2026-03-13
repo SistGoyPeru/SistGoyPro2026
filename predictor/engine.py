@@ -2034,6 +2034,11 @@ class MatchPredictionService:
             else:
                 combined_confidence = "Baja"
 
+        def _fair_odds(prob: float) -> float:
+            if prob <= 0:
+                return 0.0
+            return round(100.0 / prob, 2)
+
         def _fmt(leg: dict) -> str:
             return f"{leg['market']} — {leg['pick']}  ({leg['prob']:.1f}%)"
 
@@ -2042,31 +2047,37 @@ class MatchPredictionService:
                 "market": best_1x2["market"],
                 "pick": best_1x2["pick"],
                 "prob": round(best_1x2["prob"], 2),
+                "fair_odds": _fair_odds(float(best_1x2["prob"])),
             },
             "doble_oportunidad": {
                 "market": best_resultado["market"],
                 "pick": best_resultado["pick"],
                 "prob": round(best_resultado["prob"], 2),
+                "fair_odds": _fair_odds(float(best_resultado["prob"])),
             },
             "goles": {
                 "market": best_goles["market"],
                 "pick": best_goles["pick"],
                 "prob": round(best_goles["prob"], 2),
+                "fair_odds": _fair_odds(float(best_goles["prob"])),
             },
             "corners": {
                 "market": best_corners["market"],
                 "pick": best_corners["pick"],
                 "prob": round(best_corners["prob"], 2),
+                "fair_odds": _fair_odds(float(best_corners["prob"])),
             },
             "tarjetas": {
                 "market": best_tarjetas["market"],
                 "pick": best_tarjetas["pick"],
                 "prob": round(best_tarjetas["prob"], 2),
+                "fair_odds": _fair_odds(float(best_tarjetas["prob"])),
             },
             "multiple": {
                 "legs": [_fmt(l) for l in legs],
                 "prob_combinada": combined_pct,
                 "confidence": combined_confidence,
+                "fair_odds": _fair_odds(float(combined_pct)),
             },
         }
 

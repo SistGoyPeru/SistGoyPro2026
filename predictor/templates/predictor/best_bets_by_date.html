@@ -329,6 +329,16 @@
             margin-bottom: 6px;
         }
 
+        .multi-metric-odds {
+            display: block;
+            font-size: 0.78rem;
+            line-height: 1.3;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            margin-bottom: 6px;
+            opacity: 0.92;
+        }
+
         .multi-metric-legs {
             margin: 0;
             padding-left: 16px;
@@ -516,6 +526,7 @@
                                             <div class="multi-metric metric-no-cards {% if item.multiple_no_cards_corners_probability >= 75 %}metric-level-alta{% elif item.multiple_no_cards_corners_probability >= 62 %}metric-level-media{% else %}metric-level-baja{% endif %}">
                                                 <span class="multi-metric-title">Opción 1 · Sin tarjetas ni corners</span>
                                                 <strong class="multi-metric-value">{{ item.multiple_no_cards_corners_probability_text }}%</strong>
+                                                <span class="multi-metric-odds">Cuota justa: {{ item.multiple_no_cards_corners_fair_odds_text }}</span>
                                                 {% if item.multiple_legs_no_cards_corners %}
                                                     <ul class="multi-metric-legs">
                                                         {% for leg in item.multiple_legs_no_cards_corners %}
@@ -529,6 +540,7 @@
                                             <div class="multi-metric metric-top2 {% if item.multiple_top2_combined_probability >= 75 %}metric-level-alta{% elif item.multiple_top2_combined_probability >= 62 %}metric-level-media{% else %}metric-level-baja{% endif %}">
                                                 <span class="multi-metric-title">Opción 2 · Combinada (2 mejores)</span>
                                                 <strong class="multi-metric-value">{{ item.multiple_top2_combined_probability_text }}%</strong>
+                                                <span class="multi-metric-odds">Cuota justa: {{ item.multiple_top2_combined_fair_odds_text }}</span>
                                                 {% if item.multiple_legs_top2 %}
                                                     <ul class="multi-metric-legs">
                                                         {% for leg in item.multiple_legs_top2 %}
@@ -542,6 +554,7 @@
                                             <div class="multi-metric metric-general {% if item.multiple_combined_probability >= 75 %}metric-level-alta{% elif item.multiple_combined_probability >= 62 %}metric-level-media{% else %}metric-level-baja{% endif %}">
                                                 <span class="multi-metric-title">Opción 3 · Probabilidad combinada</span>
                                                 <strong class="multi-metric-value">{{ item.multiple_combined_probability_text }}%</strong>
+                                                <span class="multi-metric-odds">Cuota justa: {{ item.multiple_combined_fair_odds_text }}</span>
                                                 {% if item.multiple_legs_general %}
                                                     <ul class="multi-metric-legs">
                                                         {% for leg in item.multiple_legs_general %}
