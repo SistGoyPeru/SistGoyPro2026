@@ -6,13 +6,14 @@ from functools import lru_cache
 from math import exp, factorial
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from sklearn.base import clone
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, log_loss
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
@@ -622,6 +623,9 @@ FEATURE_COLUMNS = [
     "home_draw_rate",
     "away_draw_rate",
     "cards_diff",
+    "home_rest_days",
+    "away_rest_days",
+    "rest_days_diff",
     # Nuevas variables derivadas
     "home_elo",
     "away_elo",
@@ -715,11 +719,38 @@ class MatchPredictionService:
         self.label_encoder = LabelEncoder()
         self.best_model_name = ""
         self.validation_accuracy = 0.0
+        self.validation_metrics: dict[str, float | str] = {
+            "accuracy": 0.0,
+            "brier": 0.0,
+            "log_loss": 0.0,
+            "calibration": "none",
+        }
         self.model_scores: list[dict[str, float | str]] = []
         self.model = None
+        self.calibrated_model = None
+        self.totals_model = None
+        self.totals_model_blend = float(os.getenv("TOTALS_MODEL_BLEND", "0.35"))
+        self.btts_model = None
+        self.btts_model_blend = float(os.getenv("BTTS_MODEL_BLEND", "0.3"))
+        self.double_chance_models: dict[str, HistGradientBoostingClassifier] = {}
+        self.double_chance_model_blend = float(os.getenv("DOUBLE_CHANCE_MODEL_BLEND", "0.25"))
+        self.auto_blend_tuning = os.getenv("AUTO_BLEND_TUNING", "1").strip().lower() not in ("0", "false", "no")
+        self.auto_threshold_tuning = os.getenv("AUTO_THRESHOLD_TUNING", "1").strip().lower() not in ("0", "false", "no")
+        self.auto_threshold_min_coverage = float(os.getenv("AUTO_THRESHOLD_MIN_COVERAGE", "0.12"))
+        self.no_bet_min_prob = float(os.getenv("NO_BET_MIN_PROB", "62"))
+        self.market_min_prob = {
+            "1X2": float(os.getenv("NO_BET_MIN_PROB_1X2", "62")),
+            "Doble oportunidad": float(os.getenv("NO_BET_MIN_PROB_DOBLE", "70")),
+            "Totales": float(os.getenv("NO_BET_MIN_PROB_TOTALES", "74")),
+            "Ambos marcan": float(os.getenv("NO_BET_MIN_PROB_BTTS", "70")),
+            "Corners": float(os.getenv("NO_BET_MIN_PROB_CORNERS", "72")),
+            "Tarjetas amarillas": float(os.getenv("NO_BET_MIN_PROB_TARJETAS", "72")),
+            "Tarjetas totales": float(os.getenv("NO_BET_MIN_PROB_TARJETAS", "72")),
+        }
         self.team_snapshots: dict[str, dict[str, float]] = {}
         self.team_elo_snapshots: dict[str, float] = {}
         self.team_streak_snapshots: dict[str, int] = {}
+        self.team_last_match_date_snapshot: dict[str, pd.Timestamp] = {}
         self.h2h_history_snapshot: dict[tuple, list[str]] = {}
         self.standings_snapshot: dict[str, dict[str, float | int | str]] = {}
         self._team_id_cache: dict[str, int] = {}
@@ -780,6 +811,8 @@ class MatchPredictionService:
         self,
         home_stats: dict[str, float],
         away_stats: dict[str, float],
+        home_rest_days: float = 7.0,
+        away_rest_days: float = 7.0,
         home_elo: float = 1500.0,
         away_elo: float = 1500.0,
         home_streak: int = 0,
@@ -807,6 +840,9 @@ class MatchPredictionService:
             "home_draw_rate": home_stats["draw_rate"],
             "away_draw_rate": away_stats["draw_rate"],
             "cards_diff": home_stats["cards"] - away_stats["cards"],
+            "home_rest_days": float(home_rest_days),
+            "away_rest_days": float(away_rest_days),
+            "rest_days_diff": float(home_rest_days - away_rest_days),
             "home_elo": home_elo,
             "away_elo": away_elo,
             "elo_diff": home_elo - away_elo,
@@ -1667,11 +1703,24 @@ class MatchPredictionService:
         team_history: dict[str, list[dict[str, float]]] = {}
         elo_ratings: dict[str, float] = {}
         win_streaks: dict[str, int] = {}
+        team_last_played: dict[str, pd.Timestamp] = {}
         h2h_history: dict[tuple, list[str]] = {}
         rows: list[dict[str, float | str]] = []
         for _, match in self.historical_df.iterrows():
             home = match["HomeTeam"]
             away = match["AwayTeam"]
+            match_date = pd.to_datetime(match["Date"], errors="coerce")
+
+            default_rest = 7.0
+            home_last_date = team_last_played.get(home)
+            away_last_date = team_last_played.get(away)
+            home_rest_days = default_rest
+            away_rest_days = default_rest
+            if home_last_date is not None and not pd.isna(match_date):
+                home_rest_days = max(1.0, float((match_date - home_last_date).days))
+            if away_last_date is not None and not pd.isna(match_date):
+                away_rest_days = max(1.0, float((match_date - away_last_date).days))
+
             home_stats = self._recent_stats(team_history, home)
             away_stats = self._recent_stats(team_history, away)
             home_elo = elo_ratings.get(home, 1500.0)
@@ -1680,14 +1729,31 @@ class MatchPredictionService:
             away_streak = win_streaks.get(away, 0)
             h2h_stats = self._h2h_stats(h2h_history, home, away)
             feature_row = self._build_features(
-                home_stats, away_stats, home_elo, away_elo, home_streak, away_streak, h2h_stats
+                home_stats,
+                away_stats,
+                home_rest_days,
+                away_rest_days,
+                home_elo,
+                away_elo,
+                home_streak,
+                away_streak,
+                h2h_stats,
             )
             feature_row["target"] = match["FTR"]
+            total_goals = int(float(match.get("FTHG", 0)) + float(match.get("FTAG", 0)))
+            feature_row["target_total_goals_cap"] = min(total_goals, 5)
+            feature_row["target_btts"] = 1 if (float(match.get("FTHG", 0)) > 0 and float(match.get("FTAG", 0)) > 0) else 0
+            feature_row["target_dc_uno_x"] = 1 if str(match.get("FTR", "")) in ("H", "D") else 0
+            feature_row["target_dc_uno_dos"] = 1 if str(match.get("FTR", "")) in ("H", "A") else 0
+            feature_row["target_dc_x_dos"] = 1 if str(match.get("FTR", "")) in ("D", "A") else 0
             rows.append(feature_row)
             self._update_team_history(team_history, match)
             self._update_elo(elo_ratings, match)
             self._update_streak(win_streaks, match)
             self._update_h2h(h2h_history, match)
+            if not pd.isna(match_date):
+                team_last_played[home] = match_date
+                team_last_played[away] = match_date
 
         self.team_snapshots = {
             team: self._recent_stats(team_history, team)
@@ -1695,9 +1761,20 @@ class MatchPredictionService:
         }
         self.team_elo_snapshots = {team: elo_ratings.get(team, 1500.0) for team in sorted(team_history)}
         self.team_streak_snapshots = {team: win_streaks.get(team, 0) for team in sorted(team_history)}
+        self.team_last_match_date_snapshot = {
+            team: team_last_played[team]
+            for team in sorted(team_last_played)
+            if team_last_played.get(team) is not None
+        }
         self.h2h_history_snapshot = h2h_history
         self._build_standings_snapshot()
         return pd.DataFrame(rows)
+
+    def _rest_days_for_fixture(self, team_name: str, fixture_date: pd.Timestamp) -> float:
+        last_played = self.team_last_match_date_snapshot.get(team_name)
+        if last_played is None or pd.isna(fixture_date):
+            return 7.0
+        return max(1.0, float((fixture_date - last_played).days))
 
     def _build_model_factories(self):
         factories = {
@@ -1730,17 +1807,87 @@ class MatchPredictionService:
             )
         return factories
 
+    def _multiclass_brier_score(self, y_true: np.ndarray, y_prob: np.ndarray, num_classes: int) -> float:
+        if len(y_true) == 0:
+            return 0.0
+        one_hot = np.zeros((len(y_true), num_classes), dtype=float)
+        one_hot[np.arange(len(y_true)), y_true] = 1.0
+        return float(np.mean(np.sum((y_prob - one_hot) ** 2, axis=1)))
+
+    def _blend_probability(self, base_prob: float, specialist_prob: float | None, blend_weight: float) -> float:
+        if specialist_prob is None:
+            return base_prob
+        blend = min(0.8, max(0.0, blend_weight))
+        mixed = ((1.0 - blend) * base_prob) + (blend * specialist_prob)
+        return max(0.0, min(1.0, mixed))
+
+    def _totals_goal_distribution(self, feature_frame: pd.DataFrame) -> dict[int, float] | None:
+        if self.totals_model is None:
+            return None
+        try:
+            probs = self.totals_model.predict_proba(feature_frame)[0]
+            classes = self.totals_model.classes_
+        except Exception:
+            return None
+        return {int(c): float(p) for c, p in zip(classes, probs)}
+
+    def _btts_probability(self, feature_frame: pd.DataFrame) -> float | None:
+        if self.btts_model is None:
+            return None
+        try:
+            probs = self.btts_model.predict_proba(feature_frame)[0]
+            classes = list(self.btts_model.classes_)
+        except Exception:
+            return None
+        if 1 in classes:
+            return float(probs[classes.index(1)])
+        return None
+
+    def _double_chance_probabilities(self, feature_frame: pd.DataFrame) -> dict[str, float] | None:
+        if not self.double_chance_models:
+            return None
+        results: dict[str, float] = {}
+        for key, model in self.double_chance_models.items():
+            try:
+                probs = model.predict_proba(feature_frame)[0]
+                classes = list(model.classes_)
+            except Exception:
+                continue
+            if 1 in classes:
+                results[key] = float(probs[classes.index(1)])
+        return results if results else None
+
+    def _predict_probabilities(self, feature_frame: pd.DataFrame) -> dict[str, float]:
+        estimator = self.calibrated_model if self.calibrated_model is not None else self.model
+        probabilities = estimator.predict_proba(feature_frame)[0]
+        return dict(zip(self.label_encoder.classes_, probabilities))
+
     def _train_model(self) -> None:
         training_df = self._build_training_frame()
         X = training_df[FEATURE_COLUMNS]
         y = self.label_encoder.fit_transform(training_df["target"])
+        y_totals = training_df["target_total_goals_cap"].astype(int).to_numpy()
+        y_btts = training_df["target_btts"].astype(int).to_numpy()
+        y_dc_uno_x = training_df["target_dc_uno_x"].astype(int).to_numpy()
+        y_dc_uno_dos = training_df["target_dc_uno_dos"].astype(int).to_numpy()
+        y_dc_x_dos = training_df["target_dc_x_dos"].astype(int).to_numpy()
         split_index = max(20, int(len(X) * 0.8))
         X_train = X.iloc[:split_index]
         X_test = X.iloc[split_index:]
         y_train = y[:split_index]
         y_test = y[split_index:]
+        y_totals_train = y_totals[:split_index]
+        y_totals_test = y_totals[split_index:]
+        y_btts_train = y_btts[:split_index]
+        y_btts_test = y_btts[split_index:]
+        y_dc_uno_x_train = y_dc_uno_x[:split_index]
+        y_dc_uno_x_test = y_dc_uno_x[split_index:]
+        y_dc_uno_dos_train = y_dc_uno_dos[:split_index]
+        y_dc_uno_dos_test = y_dc_uno_dos[split_index:]
+        y_dc_x_dos_train = y_dc_x_dos[:split_index]
+        y_dc_x_dos_test = y_dc_x_dos[split_index:]
 
-        best_model = None
+        best_factory = None
         best_name = ""
         best_accuracy = -1.0
         self.model_scores = []
@@ -1752,12 +1899,374 @@ class MatchPredictionService:
             if score > best_accuracy:
                 best_accuracy = score
                 best_name = name
-                best_model = model
+                best_factory = factory
 
         self.best_model_name = best_name
         self.validation_accuracy = best_accuracy
-        self.model = clone(best_model)
+
+        # Modelo principal: entrenado con todo el historico.
+        self.model = best_factory()
         self.model.fit(X, y)
+
+        # Calibracion holdout: mejora calidad de probabilidades para decidir stake/no-bet.
+        calibration_label = "none"
+        y_prob_eval = self.model.predict_proba(X_test)
+        self.calibrated_model = None
+        if len(X_test) >= 15 and len(set(y_test)) == len(set(y)):
+            try:
+                prefit_model = best_factory()
+                prefit_model.fit(X_train, y_train)
+                calibrator = CalibratedClassifierCV(prefit_model, cv="prefit", method="sigmoid")
+                calibrator.fit(X_test, y_test)
+                self.calibrated_model = calibrator
+                y_prob_eval = calibrator.predict_proba(X_test)
+                calibration_label = "sigmoid-holdout"
+            except Exception:
+                self.calibrated_model = None
+                calibration_label = "none"
+
+        eval_brier = self._multiclass_brier_score(y_test, y_prob_eval, len(self.label_encoder.classes_))
+        try:
+            eval_log_loss = float(log_loss(y_test, y_prob_eval, labels=list(range(len(self.label_encoder.classes_)))))
+        except ValueError:
+            eval_log_loss = 0.0
+
+        # Baselines de mercado para comparar contra especialistas.
+        totals_base_accuracy = 0.0
+        btts_base_accuracy = 0.0
+        dc_base_accuracy = 0.0
+        totals_base_prob_rows: list[list[float]] = []
+        btts_base_prob_yes: list[float] = []
+        dc_base_prob_map: dict[str, np.ndarray] = {}
+        if len(X_test):
+            totals_true: list[int] = []
+            totals_pred: list[int] = []
+            btts_true: list[int] = []
+            btts_pred: list[int] = []
+
+            for row in X_test.to_dict(orient="records"):
+                expected_home = max(
+                    0.2,
+                    0.55 * self.league_home_goals + 0.45 * ((float(row["home_goals_for_recent"]) + float(row["away_goals_against_recent"])) / 2),
+                )
+                expected_away = max(
+                    0.2,
+                    0.55 * self.league_away_goals + 0.45 * ((float(row["away_goals_for_recent"]) + float(row["home_goals_against_recent"])) / 2),
+                )
+                expected_home += 0.06 * (float(row["home_sot_recent"]) - float(row["away_sot_recent"]))
+                expected_away += 0.04 * (float(row["away_sot_recent"]) - float(row["home_sot_recent"]))
+                total_lambda = expected_home + expected_away
+
+                p0 = exp(-total_lambda)
+                p1 = p0 * total_lambda
+                p2 = p1 * total_lambda / 2
+                p3 = p2 * total_lambda / 3
+                p4 = p3 * total_lambda / 4
+                p5_plus = max(0.0, 1.0 - (p0 + p1 + p2 + p3 + p4))
+                totals_dist = [p0, p1, p2, p3, p4, p5_plus]
+                totals_base_prob_rows.append(totals_dist)
+                totals_pred.append(int(max(range(6), key=lambda i: totals_dist[i])))
+
+                p_home_zero = exp(-expected_home)
+                p_away_zero = exp(-expected_away)
+                p_btts_yes = 1 - p_home_zero - p_away_zero + (p_home_zero * p_away_zero)
+                btts_base_prob_yes.append(float(p_btts_yes))
+                btts_pred.append(1 if p_btts_yes >= 0.5 else 0)
+
+            totals_true = list(y_totals_test.astype(int))
+            btts_true = list(y_btts_test.astype(int))
+            totals_base_accuracy = float(accuracy_score(totals_true, totals_pred)) if totals_true else 0.0
+            btts_base_accuracy = float(accuracy_score(btts_true, btts_pred)) if btts_true else 0.0
+
+            h_idx = list(self.label_encoder.classes_).index("H") if "H" in self.label_encoder.classes_ else None
+            d_idx = list(self.label_encoder.classes_).index("D") if "D" in self.label_encoder.classes_ else None
+            a_idx = list(self.label_encoder.classes_).index("A") if "A" in self.label_encoder.classes_ else None
+            if h_idx is not None and d_idx is not None and a_idx is not None:
+                p_home_arr = y_prob_eval[:, h_idx]
+                p_draw_arr = y_prob_eval[:, d_idx]
+                p_away_arr = y_prob_eval[:, a_idx]
+                dc_base_prob_map = {
+                    "uno_x": p_home_arr + p_draw_arr,
+                    "uno_dos": p_home_arr + p_away_arr,
+                    "x_dos": p_draw_arr + p_away_arr,
+                }
+                dc1x_pred = (p_home_arr + p_draw_arr >= 0.5).astype(int)
+                dc12_pred = (p_home_arr + p_away_arr >= 0.5).astype(int)
+                dcx2_pred = (p_draw_arr + p_away_arr >= 0.5).astype(int)
+                dc_scores = [
+                    float(accuracy_score(y_dc_uno_x_test.astype(int), dc1x_pred)),
+                    float(accuracy_score(y_dc_uno_dos_test.astype(int), dc12_pred)),
+                    float(accuracy_score(y_dc_x_dos_test.astype(int), dcx2_pred)),
+                ]
+                dc_base_accuracy = sum(dc_scores) / len(dc_scores)
+
+        self.validation_metrics = {
+            "accuracy": round(best_accuracy * 100, 2),
+            "brier": round(eval_brier, 4),
+            "log_loss": round(eval_log_loss, 4),
+            "calibration": calibration_label,
+            "totals_base_accuracy": round(totals_base_accuracy * 100, 2),
+            "btts_base_accuracy": round(btts_base_accuracy * 100, 2),
+            "double_chance_base_accuracy": round(dc_base_accuracy * 100, 2),
+        }
+
+        self.totals_model = None
+        if len(X_train) >= 30 and len(set(y_totals_train)) >= 3:
+            totals_model = HistGradientBoostingClassifier(random_state=42, max_depth=4)
+            totals_model.fit(X_train, y_totals_train)
+            self.totals_model = totals_model
+            totals_score = float(accuracy_score(y_totals_test, totals_model.predict(X_test))) if len(X_test) else 0.0
+            self.validation_metrics["totals_model_accuracy"] = round(totals_score * 100, 2)
+            self.validation_metrics["totals_model_blend"] = round(self.totals_model_blend, 2)
+
+        self.btts_model = None
+        if len(X_train) >= 30 and len(set(y_btts_train)) >= 2:
+            btts_model = HistGradientBoostingClassifier(random_state=42, max_depth=4)
+            btts_model.fit(X_train, y_btts_train)
+            self.btts_model = btts_model
+            btts_score = float(accuracy_score(y_btts_test, btts_model.predict(X_test))) if len(X_test) else 0.0
+            self.validation_metrics["btts_model_accuracy"] = round(btts_score * 100, 2)
+            self.validation_metrics["btts_model_blend"] = round(self.btts_model_blend, 2)
+
+        self.double_chance_models = {}
+        dc_scores: list[float] = []
+        dc_targets = {
+            "uno_x": (y_dc_uno_x_train, y_dc_uno_x_test),
+            "uno_dos": (y_dc_uno_dos_train, y_dc_uno_dos_test),
+            "x_dos": (y_dc_x_dos_train, y_dc_x_dos_test),
+        }
+        for key, (y_train_dc, y_test_dc) in dc_targets.items():
+            if len(X_train) < 30 or len(set(y_train_dc)) < 2:
+                continue
+            dc_model = HistGradientBoostingClassifier(random_state=42, max_depth=4)
+            dc_model.fit(X_train, y_train_dc)
+            self.double_chance_models[key] = dc_model
+            dc_score = float(accuracy_score(y_test_dc, dc_model.predict(X_test))) if len(X_test) else 0.0
+            dc_scores.append(dc_score)
+        if dc_scores:
+            self.validation_metrics["double_chance_model_accuracy"] = round((sum(dc_scores) / len(dc_scores)) * 100, 2)
+            self.validation_metrics["double_chance_model_blend"] = round(self.double_chance_model_blend, 2)
+
+        # Autoajuste de blends por mercado usando la ventana de validacion temporal.
+        if self.auto_blend_tuning and len(X_test):
+            candidate_blends = [i / 10 for i in range(0, 9)]
+
+            if self.totals_model is not None and totals_base_prob_rows:
+                totals_probs_raw = self.totals_model.predict_proba(X_test)
+                totals_classes = [int(c) for c in self.totals_model.classes_]
+                spec_rows: list[list[float]] = []
+                for row in totals_probs_raw:
+                    dist = [0.0] * 6
+                    for idx, cls in enumerate(totals_classes):
+                        dist[min(max(cls, 0), 5)] += float(row[idx])
+                    spec_rows.append(dist)
+
+                best_blend = self.totals_model_blend
+                best_acc = -1.0
+                for blend in candidate_blends:
+                    mixed_pred: list[int] = []
+                    for base_row, spec_row in zip(totals_base_prob_rows, spec_rows):
+                        mixed = [(1.0 - blend) * b + blend * s for b, s in zip(base_row, spec_row)]
+                        mixed_pred.append(int(max(range(6), key=lambda i: mixed[i])))
+                    acc = float(accuracy_score(y_totals_test.astype(int), mixed_pred))
+                    if acc > best_acc:
+                        best_acc = acc
+                        best_blend = blend
+                self.totals_model_blend = best_blend
+                self.validation_metrics["totals_model_blend"] = round(best_blend, 2)
+                self.validation_metrics["totals_blend_auto_accuracy"] = round(best_acc * 100, 2)
+
+            if self.btts_model is not None and btts_base_prob_yes:
+                btts_probs_raw = self.btts_model.predict_proba(X_test)
+                btts_classes = list(self.btts_model.classes_)
+                if 1 in btts_classes:
+                    one_idx = btts_classes.index(1)
+                    spec_yes = [float(row[one_idx]) for row in btts_probs_raw]
+                    best_blend = self.btts_model_blend
+                    best_acc = -1.0
+                    for blend in candidate_blends:
+                        mixed_pred = [
+                            1 if (((1.0 - blend) * base_p) + (blend * spec_p)) >= 0.5 else 0
+                            for base_p, spec_p in zip(btts_base_prob_yes, spec_yes)
+                        ]
+                        acc = float(accuracy_score(y_btts_test.astype(int), mixed_pred))
+                        if acc > best_acc:
+                            best_acc = acc
+                            best_blend = blend
+                    self.btts_model_blend = best_blend
+                    self.validation_metrics["btts_model_blend"] = round(best_blend, 2)
+                    self.validation_metrics["btts_blend_auto_accuracy"] = round(best_acc * 100, 2)
+
+            if self.double_chance_models and dc_base_prob_map:
+                dc_spec_prob_map: dict[str, np.ndarray] = {}
+                for key, model in self.double_chance_models.items():
+                    probs_raw = model.predict_proba(X_test)
+                    classes = list(model.classes_)
+                    if 1 in classes:
+                        dc_spec_prob_map[key] = probs_raw[:, classes.index(1)]
+
+                if dc_spec_prob_map:
+                    best_blend = self.double_chance_model_blend
+                    best_acc = -1.0
+                    dc_truth_map = {
+                        "uno_x": y_dc_uno_x_test.astype(int),
+                        "uno_dos": y_dc_uno_dos_test.astype(int),
+                        "x_dos": y_dc_x_dos_test.astype(int),
+                    }
+                    for blend in candidate_blends:
+                        local_scores: list[float] = []
+                        for key in ("uno_x", "uno_dos", "x_dos"):
+                            if key not in dc_base_prob_map or key not in dc_spec_prob_map:
+                                continue
+                            mixed = ((1.0 - blend) * dc_base_prob_map[key]) + (blend * dc_spec_prob_map[key])
+                            pred = (mixed >= 0.5).astype(int)
+                            local_scores.append(float(accuracy_score(dc_truth_map[key], pred)))
+                        if local_scores:
+                            acc = sum(local_scores) / len(local_scores)
+                            if acc > best_acc:
+                                best_acc = acc
+                                best_blend = blend
+                    self.double_chance_model_blend = best_blend
+                    self.validation_metrics["double_chance_model_blend"] = round(best_blend, 2)
+                    self.validation_metrics["double_chance_blend_auto_accuracy"] = round(best_acc * 100, 2)
+
+        # Autoajuste de umbrales por mercado usando precision y cobertura.
+        if self.auto_threshold_tuning and len(X_test):
+            h_idx = list(self.label_encoder.classes_).index("H") if "H" in self.label_encoder.classes_ else None
+            d_idx = list(self.label_encoder.classes_).index("D") if "D" in self.label_encoder.classes_ else None
+            a_idx = list(self.label_encoder.classes_).index("A") if "A" in self.label_encoder.classes_ else None
+
+            market_samples: dict[str, list[tuple[float, bool]]] = {
+                "1X2": [],
+                "Doble oportunidad": [],
+                "Totales": [],
+                "Ambos marcan": [],
+            }
+
+            if h_idx is not None and d_idx is not None and a_idx is not None:
+                p_home_arr = y_prob_eval[:, h_idx]
+                p_draw_arr = y_prob_eval[:, d_idx]
+                p_away_arr = y_prob_eval[:, a_idx]
+                outcomes = ["H", "D", "A"]
+                for i, y_true_val in enumerate(y_test):
+                    probs = [float(p_home_arr[i]), float(p_draw_arr[i]), float(p_away_arr[i])]
+                    pred_idx = int(max(range(3), key=lambda j: probs[j]))
+                    pred_outcome = outcomes[pred_idx]
+                    true_outcome = str(self.label_encoder.classes_[int(y_true_val)])
+                    market_samples["1X2"].append((probs[pred_idx] * 100.0, pred_outcome == true_outcome))
+
+                dc_spec_map: dict[str, np.ndarray] = {}
+                for key, model in self.double_chance_models.items():
+                    probs_raw = model.predict_proba(X_test)
+                    classes = list(model.classes_)
+                    if 1 in classes:
+                        dc_spec_map[key] = probs_raw[:, classes.index(1)]
+
+                for i in range(len(X_test)):
+                    dc_probs = {
+                        "uno_x": float(p_home_arr[i] + p_draw_arr[i]),
+                        "uno_dos": float(p_home_arr[i] + p_away_arr[i]),
+                        "x_dos": float(p_draw_arr[i] + p_away_arr[i]),
+                    }
+                    for key in ("uno_x", "uno_dos", "x_dos"):
+                        if key in dc_spec_map:
+                            dc_probs[key] = self._blend_probability(dc_probs[key], float(dc_spec_map[key][i]), self.double_chance_model_blend)
+
+                    best_dc_key = max(dc_probs, key=dc_probs.get)
+                    true_outcome = str(self.label_encoder.classes_[int(y_test[i])])
+                    truth = (
+                        (best_dc_key == "uno_x" and true_outcome in ("H", "D"))
+                        or (best_dc_key == "uno_dos" and true_outcome in ("H", "A"))
+                        or (best_dc_key == "x_dos" and true_outcome in ("D", "A"))
+                    )
+                    market_samples["Doble oportunidad"].append((dc_probs[best_dc_key] * 100.0, truth))
+
+            if totals_base_prob_rows:
+                totals_spec_prob_rows: list[list[float]] = []
+                if self.totals_model is not None:
+                    totals_probs_raw = self.totals_model.predict_proba(X_test)
+                    totals_classes = [int(c) for c in self.totals_model.classes_]
+                    for row in totals_probs_raw:
+                        dist = [0.0] * 6
+                        for idx, cls in enumerate(totals_classes):
+                            dist[min(max(cls, 0), 5)] += float(row[idx])
+                        totals_spec_prob_rows.append(dist)
+
+                for i, total_true in enumerate(y_totals_test.astype(int)):
+                    base = totals_base_prob_rows[i]
+                    spec = totals_spec_prob_rows[i] if i < len(totals_spec_prob_rows) else None
+                    probs = {
+                        "Over 1.5": 1.0 - (base[0] + base[1]),
+                        "Over 2.5": 1.0 - (base[0] + base[1] + base[2]),
+                        "Under 3.5": base[0] + base[1] + base[2] + base[3],
+                        "Under 4.5": base[0] + base[1] + base[2] + base[3] + base[4],
+                    }
+                    if spec is not None:
+                        spec_probs = {
+                            "Over 1.5": 1.0 - (spec[0] + spec[1]),
+                            "Over 2.5": 1.0 - (spec[0] + spec[1] + spec[2]),
+                            "Under 3.5": spec[0] + spec[1] + spec[2] + spec[3],
+                            "Under 4.5": spec[0] + spec[1] + spec[2] + spec[3] + spec[4],
+                        }
+                        for key in probs:
+                            probs[key] = self._blend_probability(probs[key], spec_probs[key], self.totals_model_blend)
+
+                    best_key = max(probs, key=probs.get)
+                    truth = (
+                        (best_key == "Over 1.5" and total_true >= 2)
+                        or (best_key == "Over 2.5" and total_true >= 3)
+                        or (best_key == "Under 3.5" and total_true <= 3)
+                        or (best_key == "Under 4.5" and total_true <= 4)
+                    )
+                    market_samples["Totales"].append((probs[best_key] * 100.0, truth))
+
+            if btts_base_prob_yes:
+                btts_spec_yes: list[float] = []
+                if self.btts_model is not None:
+                    probs_raw = self.btts_model.predict_proba(X_test)
+                    classes = list(self.btts_model.classes_)
+                    if 1 in classes:
+                        btts_spec_yes = [float(row[classes.index(1)]) for row in probs_raw]
+
+                for i, y_true_btts in enumerate(y_btts_test.astype(int)):
+                    p_yes = float(btts_base_prob_yes[i])
+                    if i < len(btts_spec_yes):
+                        p_yes = self._blend_probability(p_yes, btts_spec_yes[i], self.btts_model_blend)
+                    p_no = 1.0 - p_yes
+                    if p_yes >= p_no:
+                        market_samples["Ambos marcan"].append((p_yes * 100.0, y_true_btts == 1))
+                    else:
+                        market_samples["Ambos marcan"].append((p_no * 100.0, y_true_btts == 0))
+
+            threshold_candidates = list(range(55, 86))
+            for market_name in ("1X2", "Doble oportunidad", "Totales", "Ambos marcan"):
+                samples = market_samples.get(market_name, [])
+                if not samples:
+                    continue
+                best_threshold = float(self.market_min_prob.get(market_name, self.no_bet_min_prob))
+                best_score = -1.0
+                best_precision = 0.0
+                best_coverage = 0.0
+
+                for th in threshold_candidates:
+                    accepted = [ok for prob, ok in samples if prob >= th]
+                    coverage = (len(accepted) / len(samples)) if samples else 0.0
+                    if not accepted or coverage < self.auto_threshold_min_coverage:
+                        continue
+                    precision = sum(1 for ok in accepted if ok) / len(accepted)
+                    score = precision * (0.5 + 0.5 * coverage)
+                    if score > best_score:
+                        best_score = score
+                        best_threshold = float(th)
+                        best_precision = precision
+                        best_coverage = coverage
+
+                self.market_min_prob[market_name] = best_threshold
+                key_prefix = market_name.lower().replace(" ", "_")
+                self.validation_metrics[f"{key_prefix}_threshold_auto"] = round(best_threshold, 2)
+                if best_score >= 0:
+                    self.validation_metrics[f"{key_prefix}_precision_auto"] = round(best_precision * 100, 2)
+                    self.validation_metrics[f"{key_prefix}_coverage_auto"] = round(best_coverage * 100, 2)
 
     def _pending_mask(self) -> pd.Series:
         result_series = self.fixtures_df["resultado"].fillna("").astype(str).str.strip()
@@ -1803,7 +2312,14 @@ class MatchPredictionService:
         expected_away += 0.04 * (away_stats["shots_on_target"] - home_stats["shots_on_target"])
         return self._score_projection_from_expected(expected_home, expected_away)
 
-    def _market_probabilities(self, class_map: dict[str, float], score_projection: dict[str, float | str | list[dict[str, float | str]]], home_stats: dict[str, float], away_stats: dict[str, float]) -> dict[str, object]:
+    def _market_probabilities(
+        self,
+        class_map: dict[str, float],
+        score_projection: dict[str, float | str | list[dict[str, float | str]]],
+        home_stats: dict[str, float],
+        away_stats: dict[str, float],
+        feature_frame: pd.DataFrame | None = None,
+    ) -> dict[str, object]:
         p_home = float(class_map.get("H", 0.0))
         p_draw = float(class_map.get("D", 0.0))
         p_away = float(class_map.get("A", 0.0))
@@ -1823,9 +2339,32 @@ class MatchPredictionService:
         p_under_3_5 = p0 + p1 + p2 + p3
         p_under_4_5 = p0 + p1 + p2 + p3 + p4
 
+        p_dc_uno_x = p_home + p_draw
+        p_dc_uno_dos = p_home + p_away
+        p_dc_x_dos = p_draw + p_away
+
+        totals_dist = self._totals_goal_distribution(feature_frame) if feature_frame is not None else None
+        if totals_dist is not None:
+            model_over_1_5 = sum(p for g, p in totals_dist.items() if g >= 2)
+            model_over_2_5 = sum(p for g, p in totals_dist.items() if g >= 3)
+            model_under_3_5 = sum(p for g, p in totals_dist.items() if g <= 3)
+            model_under_4_5 = sum(p for g, p in totals_dist.items() if g <= 4)
+            p_over_1_5 = self._blend_probability(p_over_1_5, model_over_1_5, self.totals_model_blend)
+            p_over_2_5 = self._blend_probability(p_over_2_5, model_over_2_5, self.totals_model_blend)
+            p_under_3_5 = self._blend_probability(p_under_3_5, model_under_3_5, self.totals_model_blend)
+            p_under_4_5 = self._blend_probability(p_under_4_5, model_under_4_5, self.totals_model_blend)
+
+        dc_model_probs = self._double_chance_probabilities(feature_frame) if feature_frame is not None else None
+        if dc_model_probs is not None:
+            p_dc_uno_x = self._blend_probability(p_dc_uno_x, dc_model_probs.get("uno_x"), self.double_chance_model_blend)
+            p_dc_uno_dos = self._blend_probability(p_dc_uno_dos, dc_model_probs.get("uno_dos"), self.double_chance_model_blend)
+            p_dc_x_dos = self._blend_probability(p_dc_x_dos, dc_model_probs.get("x_dos"), self.double_chance_model_blend)
+
         p_home_zero = exp(-expected_home)
         p_away_zero = exp(-expected_away)
         p_btts_yes = 1 - p_home_zero - p_away_zero + (p_home_zero * p_away_zero)
+        model_btts_yes = self._btts_probability(feature_frame) if feature_frame is not None else None
+        p_btts_yes = self._blend_probability(p_btts_yes, model_btts_yes, self.btts_model_blend)
 
         expected_corners = max(3.0, home_stats["corners"] + away_stats["corners"])
         p_corners_under_8_5 = sum(
@@ -1859,9 +2398,9 @@ class MatchPredictionService:
 
         return {
             "doble_oportunidad": {
-                "uno_x": round((p_home + p_draw) * 100, 2),
-                "uno_dos": round((p_home + p_away) * 100, 2),
-                "x_dos": round((p_draw + p_away) * 100, 2),
+                "uno_x": round(p_dc_uno_x * 100, 2),
+                "uno_dos": round(p_dc_uno_dos * 100, 2),
+                "x_dos": round(p_dc_x_dos * 100, 2),
             },
             "btts": {
                 "si": round(p_btts_yes * 100, 2),
@@ -2092,8 +2631,28 @@ class MatchPredictionService:
                 "note": "No hay informacion suficiente para una recomendacion.",
             }
 
-        best = candidates[0]
+        eligible_candidates = []
+        for candidate in candidates:
+            market = str(candidate.get("market", ""))
+            threshold = float(self.market_min_prob.get(market, self.no_bet_min_prob))
+            if float(candidate["prob"]) >= threshold:
+                eligible_candidates.append(candidate)
+
+        if not eligible_candidates:
+            best_overall = candidates[0]
+            prob = float(best_overall["prob"])
+            return {
+                "market": "No bet zone",
+                "pick": "Evitar apuesta",
+                "probability": round(prob, 2),
+                "confidence": "Baja",
+                "risk": "Controlado",
+                "note": "Ningun mercado supera su umbral minimo configurable.",
+            }
+
+        best = eligible_candidates[0]
         prob = float(best["prob"])
+
         if prob >= 75:
             confidence = "Alta"
             risk = "Bajo"
@@ -2185,12 +2744,22 @@ class MatchPredictionService:
         home_streak = self.team_streak_snapshots.get(home, 0)
         away_streak = self.team_streak_snapshots.get(away, 0)
         h2h_stats = self._h2h_stats(self.h2h_history_snapshot, home, away)
+        fixture_date = pd.to_datetime(str(match["fecha"]), dayfirst=True, errors="coerce")
+        home_rest_days = self._rest_days_for_fixture(home, fixture_date)
+        away_rest_days = self._rest_days_for_fixture(away, fixture_date)
         features = self._build_features(
-            home_stats, away_stats, home_elo, away_elo, home_streak, away_streak, h2h_stats
+            home_stats,
+            away_stats,
+            home_rest_days,
+            away_rest_days,
+            home_elo,
+            away_elo,
+            home_streak,
+            away_streak,
+            h2h_stats,
         )
         feature_frame = pd.DataFrame([features], columns=FEATURE_COLUMNS)
-        probabilities = self.model.predict_proba(feature_frame)[0]
-        class_map = dict(zip(self.label_encoder.classes_, probabilities))
+        class_map = self._predict_probabilities(feature_frame)
 
         weather = self._weather_context(home, match["fecha"], match["hora"])
         players_status = self._players_context(home, away, str(match["fecha"]))
@@ -2230,7 +2799,7 @@ class MatchPredictionService:
         )
         class_map = self._stabilize_probabilities(class_map, score_projection)
         top_label = max(class_map, key=class_map.get)
-        markets = self._market_probabilities(class_map, score_projection, home_stats, away_stats)
+        markets = self._market_probabilities(class_map, score_projection, home_stats, away_stats, feature_frame)
         kickoff_hour = int(str(match["hora"]).split(":")[0]) if ":" in str(match["hora"]) else 12
         kickoff_label = "Noche" if kickoff_hour >= 20 else "Tarde" if kickoff_hour >= 14 else "Mañana"
         context_explanation = self._build_context_explanation(context_impact)
@@ -2292,6 +2861,10 @@ class MatchPredictionService:
             "away_elo": round(away_elo),
             "home_streak": home_streak,
             "away_streak": away_streak,
+            "rest_days": {
+                "home": round(home_rest_days, 1),
+                "away": round(away_rest_days, 1),
+            },
             "h2h": {
                 "home_win_rate": round(h2h_stats["home_win_rate"] * 100),
                 "draw_rate": round(h2h_stats["draw_rate"] * 100),
@@ -2315,16 +2888,26 @@ class MatchPredictionService:
         home_streak = self.team_streak_snapshots.get(home, 0)
         away_streak = self.team_streak_snapshots.get(away, 0)
         h2h_stats = self._h2h_stats(self.h2h_history_snapshot, home, away)
+        fixture_date = pd.to_datetime(str(match["fecha"]), dayfirst=True, errors="coerce")
+        home_rest_days = self._rest_days_for_fixture(home, fixture_date)
+        away_rest_days = self._rest_days_for_fixture(away, fixture_date)
 
         features = self._build_features(
-            home_stats, away_stats, home_elo, away_elo, home_streak, away_streak, h2h_stats
+            home_stats,
+            away_stats,
+            home_rest_days,
+            away_rest_days,
+            home_elo,
+            away_elo,
+            home_streak,
+            away_streak,
+            h2h_stats,
         )
         feature_frame = pd.DataFrame([features], columns=FEATURE_COLUMNS)
-        probabilities_raw = self.model.predict_proba(feature_frame)[0]
-        class_map = dict(zip(self.label_encoder.classes_, probabilities_raw))
+        class_map = self._predict_probabilities(feature_frame)
 
         score_projection = self._predict_scoreline(home_stats, away_stats)
-        markets = self._market_probabilities(class_map, score_projection, home_stats, away_stats)
+        markets = self._market_probabilities(class_map, score_projection, home_stats, away_stats, feature_frame)
         probabilities = {
             "local": round(class_map.get("H", 0.0) * 100, 2),
             "empate": round(class_map.get("D", 0.0) * 100, 2),

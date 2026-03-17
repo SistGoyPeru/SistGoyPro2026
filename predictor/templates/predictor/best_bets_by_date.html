@@ -78,6 +78,19 @@
             font-size: clamp(0.8rem, 2vw, 0.95rem);
         }
 
+        .sort-criteria {
+            margin: 7px 0 0;
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(108, 227, 163, 0.35);
+            background: rgba(108, 227, 163, 0.12);
+            color: #bff0d8;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
         .link-back {
             display: inline-flex;
             align-items: center;
@@ -275,6 +288,21 @@
             flex: 1;
         }
 
+        .sync-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(108, 227, 163, 0.4);
+            background: rgba(108, 227, 163, 0.14);
+            color: #6ce3a3;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
         .multi-conf-badge {
             border-radius: 999px;
             padding: 2px 8px;
@@ -459,6 +487,32 @@
                 padding: 12px 10px 18px;
             }
         }
+        .pdf-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 2px solid rgba(108, 227, 163, 0.25);
+        }
+        .pdf-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a7d5c;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .pdf-buttons-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        @media (max-width: 840px) {
+            .pdf-buttons-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -468,11 +522,20 @@
                 <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoyPro">
                 <div>
                     <h1>Mejores apuestas por fecha</h1>
-                    <p class="sub">Encuentros de la proxima fecha disponible y 1 dia mas ({{ window_label }}), ordenados primero por fecha y luego por probabilidad combinada.</p>
+                    <p class="sub">Encuentros de la proxima fecha disponible y 1 dia mas ({{ window_label }}), ordenados por fecha y luego por probabilidad combinada general de la apuesta multiple.</p>
+                    <p class="sort-criteria">Criterio principal del ranking: Probabilidad combinada general (Apuesta multiple)</p>
                 </div>
             </div>
             <a class="link-back" href="/">Volver al dashboard</a>
-            <a class="link-back" href="{% url 'best_bets_pdf' %}" style="background: rgba(108, 227, 163, 0.12); border-color: rgba(108, 227, 163, 0.35); color: #6ce3a3;">📥 Descargar PDF</a>
+            <div class="pdf-section">
+                <div class="pdf-section-title">📊 Descargar reportes por mercado</div>
+                <div class="pdf-buttons-grid">
+                    <a class="link-back" href="{% url 'best_bets_pdf' %}" style="background: rgba(108, 227, 163, 0.12); border-color: rgba(108, 227, 163, 0.35); color: #6ce3a3;">📥 General</a>
+                    <a class="link-back" href="{% url 'best_bets_1x2_pdf' %}" style="background: rgba(246, 207, 85, 0.12); border-color: rgba(246, 207, 85, 0.35); color: #f6cf55;">📥 1X2</a>
+                    <a class="link-back" href="{% url 'best_bets_double_chance_pdf' %}" style="background: rgba(94, 180, 255, 0.12); border-color: rgba(94, 180, 255, 0.35); color: #5eb4ff;">📥 Doble oportunidad</a>
+                    <a class="link-back" href="{% url 'best_bets_totals_pdf' %}" style="background: rgba(255, 146, 94, 0.12); border-color: rgba(255, 146, 94, 0.35); color: #ff925e;">📥 Totales</a>
+                </div>
+            </div>
         </section>
 
         <section class="refresh-log">
@@ -519,6 +582,7 @@
                                     <div class="multi-header">
                                         <span class="multi-icon">🅃</span>
                                         <span class="multi-title">Apuesta múltiple — Solo selecciones Alta confianza</span>
+                                        <span class="sync-badge">Consistente con dashboard</span>
                                         <span class="multi-conf-badge {% if item.multiple_confidence == 'Alta' %}badge-alta{% elif item.multiple_confidence == 'Media' %}badge-media{% else %}badge-baja{% endif %}">{{ item.multiple_confidence }}</span>
                                     </div>
                                     {% if item.multiple_legs %}

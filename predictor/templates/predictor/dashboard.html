@@ -279,6 +279,7 @@
         }
 
         select,
+        input,
         button {
             width: 100%;
             border-radius: 10px;
@@ -310,7 +311,7 @@
             transform: translateY(-1px);
             box-shadow: 0 8px 22px rgba(246, 207, 85, 0.33);
         }
-        
+
         button:active {
             transform: translateY(0);
         }
@@ -339,6 +340,7 @@
             color: #d8ebe1;
             font-size: clamp(0.85rem, 2vw, 0.95rem);
         }
+
 
         .sync-note {
             margin-top: 14px;
@@ -1120,6 +1122,45 @@
                     {% endfor %}
                 </div>
 
+                {% if validation_metrics %}
+                <div class="model-list" style="margin-top:10px">
+                    <div class="row"><span>Calibración probabilística</span><strong>{{ validation_metrics.calibration }}</strong></div>
+                    <div class="row"><span>Brier score</span><strong>{{ validation_metrics.brier }}</strong></div>
+                    <div class="row"><span>Log loss</span><strong>{{ validation_metrics.log_loss }}</strong></div>
+                    {% if validation_metrics.totals_model_accuracy %}
+                    <div class="row"><span>Accuracy modelo Totales</span><strong>{{ validation_metrics.totals_model_accuracy }}%</strong></div>
+                    <div class="row"><span>Accuracy base Totales</span><strong>{{ validation_metrics.totals_base_accuracy }}%</strong></div>
+                    <div class="row"><span>Blend Totales</span><strong>{{ validation_metrics.totals_model_blend }}</strong></div>
+                    {% if validation_metrics.totals_blend_auto_accuracy %}
+                    <div class="row"><span>Accuracy blend Totales</span><strong>{{ validation_metrics.totals_blend_auto_accuracy }}%</strong></div>
+                    {% endif %}
+                    {% endif %}
+                    {% if validation_metrics.btts_model_accuracy %}
+                    <div class="row"><span>Accuracy modelo BTTS</span><strong>{{ validation_metrics.btts_model_accuracy }}%</strong></div>
+                    <div class="row"><span>Accuracy base BTTS</span><strong>{{ validation_metrics.btts_base_accuracy }}%</strong></div>
+                    <div class="row"><span>Blend BTTS</span><strong>{{ validation_metrics.btts_model_blend }}</strong></div>
+                    {% if validation_metrics.btts_blend_auto_accuracy %}
+                    <div class="row"><span>Accuracy blend BTTS</span><strong>{{ validation_metrics.btts_blend_auto_accuracy }}%</strong></div>
+                    {% endif %}
+                    {% endif %}
+                    {% if validation_metrics.double_chance_model_accuracy %}
+                    <div class="row"><span>Accuracy modelo Doble op.</span><strong>{{ validation_metrics.double_chance_model_accuracy }}%</strong></div>
+                    <div class="row"><span>Accuracy base Doble op.</span><strong>{{ validation_metrics.double_chance_base_accuracy }}%</strong></div>
+                    <div class="row"><span>Blend Doble op.</span><strong>{{ validation_metrics.double_chance_model_blend }}</strong></div>
+                    {% if validation_metrics.double_chance_blend_auto_accuracy %}
+                    <div class="row"><span>Accuracy blend Doble op.</span><strong>{{ validation_metrics.double_chance_blend_auto_accuracy }}%</strong></div>
+                    {% endif %}
+                    {% endif %}
+                    <div class="row"><span>No-bet zone mínima</span><strong>{{ no_bet_min_prob }}%</strong></div>
+                    {% if market_min_prob_rows %}
+                    {% for row in market_min_prob_rows %}
+                    <div class="row"><span>{{ row.label }}</span><strong>{{ row.value }}%</strong></div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+
+                {% endif %}
+
                 {% if prediction %}
                 <div class="chart-grid">
                     <div class="chart-wrap">
@@ -1411,12 +1452,20 @@
                             <strong>{{ prediction.home_elo }} <span class="elo-badge">ELO</span></strong>
                         </div>
                         <div class="stat-card">
+                            <span>Descanso local</span>
+                            <strong>{{ prediction.rest_days.home|floatformat:1 }} días</strong>
+                        </div>
+                        <div class="stat-card">
                             <span>Racha local</span>
                             <strong>{% if prediction.home_streak > 0 %}+{{ prediction.home_streak }} victorias{% elif prediction.home_streak < 0 %}{{ prediction.home_streak }} derrotas{% else %}Neutral{% endif %}</strong>
                         </div>
                         <div class="stat-card">
                             <span>Elo visitante</span>
                             <strong>{{ prediction.away_elo }} <span class="elo-badge">ELO</span></strong>
+                        </div>
+                        <div class="stat-card">
+                            <span>Descanso visitante</span>
+                            <strong>{{ prediction.rest_days.away|floatformat:1 }} días</strong>
                         </div>
                         <div class="stat-card">
                             <span>Racha visitante</span>
@@ -1539,7 +1588,7 @@
                         </div>
                     </div>
 
-                    <div class="note">El algoritmo se elige por validación cronológica sobre tu histórico. Se muestran mercados de doble oportunidad, BTTS, corners y tarjetas con estimación probabilística. Ningún modelo garantiza 100% de acierto real.</div>
+                    <div class="note">El algoritmo se elige por validación cronológica sobre tu histórico. Se muestran mercados de doble oportunidad, BTTS, corners y tarjetas con estimación probabilística. Regla de control activa: no-bet si la mejor probabilidad es menor a {{ no_bet_min_prob }}%. Ningún modelo garantiza 100% de acierto real.</div>
                 {% else %}
                     <h2 class="section-title">Sin pronóstico disponible</h2>
                     <p class="support">Selecciona un partido pendiente para generar el resultado estimado.</p>

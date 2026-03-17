@@ -115,6 +115,34 @@ def _fair_odds(probability_pct: float) -> float:
 	return round(100.0 / probability_pct, 2)
 
 
+def _parse_decimal_odd(value: str | None) -> float | None:
+	if value is None:
+		return None
+	clean = str(value).strip().replace(",", ".")
+	if not clean:
+		return None
+	try:
+		odd = float(clean)
+	except ValueError:
+		return None
+	if odd <= 1.0:
+		return None
+	return odd
+
+
+def _value_signal(probability_pct: float, offered_odd: float | None) -> dict[str, object]:
+	fair_odd = _fair_odds(probability_pct)
+	has_value = bool(offered_odd is not None and fair_odd > 0 and offered_odd > fair_odd)
+	edge = round((offered_odd - fair_odd), 2) if offered_odd is not None else 0.0
+	return {
+		"probability": round(probability_pct, 2),
+		"fair_odd": fair_odd,
+		"offered_odd": offered_odd,
+		"has_value": has_value,
+		"edge": edge,
+	}
+
+
 def dashboard(request):
 	liga = request.GET.get("liga") or request.POST.get("liga", "spain")
 	if liga not in ("spain", "bundesliga", "premier", "seriea", "ligue1", "primeiraliga", "proleague", "eredivisie"):
@@ -154,10 +182,21 @@ def dashboard(request):
 		"selected_match_key": selected_match_key,
 		"model_name": service.best_model_name,
 		"validation_accuracy": round(service.validation_accuracy * 100, 2),
+		"validation_metrics": service.validation_metrics,
+		"no_bet_min_prob": round(service.no_bet_min_prob, 2),
+		"market_min_prob": service.market_min_prob,
 		"model_scores": service.model_scores,
 		"error_message": error_message,
 		"refresh_status": refresh_status,
 	}
+	context["market_min_prob_rows"] = [
+		{"label": "Umbral 1X2", "value": service.market_min_prob.get("1X2", service.no_bet_min_prob)},
+		{"label": "Umbral doble oportunidad", "value": service.market_min_prob.get("Doble oportunidad", service.no_bet_min_prob)},
+		{"label": "Umbral totales", "value": service.market_min_prob.get("Totales", service.no_bet_min_prob)},
+		{"label": "Umbral BTTS", "value": service.market_min_prob.get("Ambos marcan", service.no_bet_min_prob)},
+		{"label": "Umbral corners", "value": service.market_min_prob.get("Corners", service.no_bet_min_prob)},
+		{"label": "Umbral tarjetas", "value": service.market_min_prob.get("Tarjetas totales", service.no_bet_min_prob)},
+	]
 	return render(request, "predictor/dashboard.html", context)
 
 
@@ -202,15 +241,15 @@ def best_bets_by_date(request):
 	window_end = window_start + timedelta(days=1)
 	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
 
-	# Calcular la recomendacion ligera de cada encuentro y ordenar por probabilidad combinada.
+	# Calcular recomendaciones con el mismo pipeline del dashboard para evitar diferencias.
 	for liga, service, fixture, sort_date in window_fixtures:
 		try:
-			prediction = service.predict_recommended_bet_fast(fixture["match_key"])
+			prediction = service.predict_match(fixture["match_key"])
 		except ValueError:
 			continue
 
-		recommended = prediction["recommended_bet"]
-		multiple = prediction.get("multiple", {})
+		recommended = prediction.get("match_report", {}).get("recommended_bet", {})
+		multiple = prediction.get("categorized_bets", {}).get("multiple", {})
 		multiple_legs = list(multiple.get("legs", []))
 		top_two_legs = _top_two_legs(multiple_legs)
 		no_cards_corners_legs = _legs_without_cards_corners(multiple_legs)
@@ -233,10 +272,10 @@ def best_bets_by_date(request):
 			"away_team": str(fixture["visitante"]),
 			"home_logo": fixture.get("local_logo", ""),
 			"away_logo": fixture.get("visitante_logo", ""),
-			"market": str(recommended["market"]),
-			"pick": str(recommended["pick"]),
-			"probability": float(recommended["probability"]),
-			"confidence": str(recommended["confidence"]),
+			"market": str(recommended.get("market", "Sin datos")),
+			"pick": str(recommended.get("pick", "Sin recomendacion")),
+			"probability": float(recommended.get("probability", 0.0)),
+			"confidence": str(recommended.get("confidence", "Baja")),
 			"multiple_confidence": str(multiple.get("confidence", "Sin selecciones")),
 			"multiple_legs": multiple_legs,
 			"multiple_legs_general": multiple_legs,
@@ -262,9 +301,9 @@ def best_bets_by_date(request):
 		best_entries,
 		key=lambda item: (
 			item["sort_date"],
-			-float(item.get("multiple_no_cards_corners_probability", 0.0)),
-			-float(item.get("multiple_top2_combined_probability", 0.0)),
 			-float(item["multiple_combined_probability"]),
+			-float(item.get("multiple_top2_combined_probability", 0.0)),
+			-float(item.get("multiple_no_cards_corners_probability", 0.0)),
 			item["kickoff"],
 		),
 	)
@@ -318,15 +357,14 @@ def best_bets_pdf(request):
 	window_end = window_start + timedelta(days=1)
 	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
 
-	# Calcular recomendaciones
+	# Calcular recomendaciones con el mismo pipeline del dashboard para evitar diferencias.
 	for liga, service, fixture, sort_date in window_fixtures:
 		try:
-			prediction = service.predict_recommended_bet_fast(fixture["match_key"])
+			prediction = service.predict_match(fixture["match_key"])
 		except ValueError:
 			continue
 
-		recommended = prediction["recommended_bet"]
-		multiple = prediction.get("multiple", {})
+		multiple = prediction.get("categorized_bets", {}).get("multiple", {})
 		multiple_legs = list(multiple.get("legs", []))
 		top_two_legs = _top_two_legs(multiple_legs)
 		no_cards_corners_legs = _legs_without_cards_corners(multiple_legs)
@@ -368,9 +406,9 @@ def best_bets_pdf(request):
 		best_entries,
 		key=lambda item: (
 			item["sort_date"],
-			-float(item.get("multiple_no_cards_corners_probability", 0.0)),
-			-float(item.get("multiple_top2_combined_probability", 0.0)),
 			-float(item["multiple_combined_probability"]),
+			-float(item.get("multiple_top2_combined_probability", 0.0)),
+			-float(item.get("multiple_no_cards_corners_probability", 0.0)),
 		),
 	)
 
@@ -634,4 +672,344 @@ def best_bets_pdf(request):
 
 	response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
 	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_{window_start.strftime("%d_%m_%Y")}.pdf"'
+	return response
+
+
+def best_bets_1x2_pdf(request):
+	"""Generar PDF de mejores apuestas 1X2 por fecha."""
+	entries: list[dict[str, object]] = []
+	today = datetime.now().date()
+
+	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
+	for liga, factory in LEAGUE_SERVICE_FACTORIES.items():
+		service = factory()
+		for fixture in service.get_pending_fixtures():
+			sort_date = _parse_fixture_date(str(fixture["fecha"]))
+			if sort_date is None or sort_date < today:
+				continue
+			eligible_fixtures.append((liga, service, fixture, sort_date))
+
+	if not eligible_fixtures:
+		return HttpResponse("No hay encuentros pendientes.", content_type="text/plain")
+
+	window_start = min(row[3] for row in eligible_fixtures)
+	window_end = window_start + timedelta(days=1)
+	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
+
+	for _liga, service, fixture, sort_date in window_fixtures:
+		try:
+			prediction = service.predict_match(fixture["match_key"])
+		except ValueError:
+			continue
+
+		pick_1x2 = prediction.get("categorized_bets", {}).get("resultado_1x2", {})
+		prob = float(pick_1x2.get("prob", 0.0))
+		fair_odds = _fair_odds(prob)
+		entries.append(
+			{
+				"sort_date": sort_date,
+				"date_label": str(fixture["fecha"]),
+				"league_name": service.league_name,
+				"home_team": str(fixture["local"]),
+				"away_team": str(fixture["visitante"]),
+				"kickoff": str(fixture["hora"]),
+				"market": str(pick_1x2.get("market", "1X2")),
+				"pick": str(pick_1x2.get("pick", "Sin dato")),
+				"probability": prob,
+				"probability_text": f"{prob:.2f}".replace(".", ","),
+				"fair_odds": fair_odds,
+				"fair_odds_text": f"{fair_odds:.2f}".replace(".", ","),
+			}
+		)
+
+	entries = sorted(entries, key=lambda item: (item["sort_date"], -float(item["probability"]), item["kickoff"]))
+
+	buffer = BytesIO()
+	doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=0.5*inch, leftMargin=0.5*inch, topMargin=0.5*inch, bottomMargin=0.5*inch)
+	styles = getSampleStyleSheet()
+	story = []
+
+	title_style = ParagraphStyle("Title1X2", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=22, textColor=colors.HexColor("#0f3d28"), alignment=1, spaceAfter=6)
+	subtitle_style = ParagraphStyle("Sub1X2", parent=styles["Normal"], fontName="Helvetica", fontSize=10, textColor=colors.HexColor("#1a7d5c"), alignment=1, spaceAfter=16)
+	header_style = ParagraphStyle("Header1X2", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=11, textColor=colors.white, spaceAfter=6, spaceBefore=10)
+	row_style = ParagraphStyle("Row1X2", parent=styles["Normal"], fontName="Helvetica", fontSize=9, leading=11)
+
+	window_label = f"{window_start.strftime('%d/%m/%Y')} al {window_end.strftime('%d/%m/%Y')}"
+	story.append(Paragraph("MEJORES APUESTAS 1X2 POR FECHA", title_style))
+	story.append(Paragraph(f"Ventana: {window_label}", subtitle_style))
+
+	grouped: dict[str, list[dict[str, object]]] = {}
+	for item in entries:
+		grouped.setdefault(str(item["date_label"]), []).append(item)
+
+	for date_label in sorted(grouped.keys()):
+		head = Table([[Paragraph(f"FECHA: {date_label}", header_style)]], colWidths=[7.5*inch])
+		head.setStyle(TableStyle([
+			("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1a7d5c")),
+			("LEFTPADDING", (0, 0), (-1, -1), 10),
+			("TOPPADDING", (0, 0), (-1, -1), 8),
+			("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+		]))
+		story.append(head)
+		story.append(Spacer(1, 0.08*inch))
+
+		rows = [["#", "Encuentro", "Liga", "1X2", "Prob.", "Cuota justa"]]
+		for idx, item in enumerate(grouped[date_label], 1):
+			rows.append([
+				str(idx),
+				f"{item['home_team']} vs {item['away_team']} ({item['kickoff']})",
+				str(item["league_name"]),
+				str(item["pick"]),
+				f"{item['probability_text']}%",
+				str(item["fair_odds_text"]),
+			])
+
+		table = Table(rows, colWidths=[0.4*inch, 2.9*inch, 1.35*inch, 0.8*inch, 0.9*inch, 1.1*inch])
+		table.setStyle(TableStyle([
+			("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8f5f0")),
+			("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f3d28")),
+			("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+			("FONTSIZE", (0, 0), (-1, -1), 8),
+			("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#a7d7c4")),
+			("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+			("LEFTPADDING", (0, 0), (-1, -1), 5),
+			("RIGHTPADDING", (0, 0), (-1, -1), 5),
+		]))
+		story.append(table)
+		story.append(Spacer(1, 0.15*inch))
+
+	doc.build(story)
+	buffer.seek(0)
+	response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_1x2_{window_start.strftime("%d_%m_%Y")}.pdf"'
+	return response
+
+
+def best_bets_double_chance_pdf(request):
+	"""Generar PDF de mejores apuestas Doble Oportunidad por fecha."""
+	entries: list[dict[str, object]] = []
+	today = datetime.now().date()
+
+	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
+	for liga, factory in LEAGUE_SERVICE_FACTORIES.items():
+		service = factory()
+		for fixture in service.get_pending_fixtures():
+			sort_date = _parse_fixture_date(str(fixture["fecha"]))
+			if sort_date is None or sort_date < today:
+				continue
+			eligible_fixtures.append((liga, service, fixture, sort_date))
+
+	if not eligible_fixtures:
+		return HttpResponse("No hay encuentros pendientes.", content_type="text/plain")
+
+	window_start = min(row[3] for row in eligible_fixtures)
+	window_end = window_start + timedelta(days=1)
+	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
+
+	for _liga, service, fixture, sort_date in window_fixtures:
+		try:
+			prediction = service.predict_match(fixture["match_key"])
+		except ValueError:
+			continue
+
+		pick_dc = prediction.get("categorized_bets", {}).get("doble_oportunidad", {})
+		prob = float(pick_dc.get("prob", 0.0))
+		fair_odds = _fair_odds(prob)
+		entries.append(
+			{
+				"sort_date": sort_date,
+				"date_label": str(fixture["fecha"]),
+				"league_name": service.league_name,
+				"home_team": str(fixture["local"]),
+				"away_team": str(fixture["visitante"]),
+				"kickoff": str(fixture["hora"]),
+				"market": str(pick_dc.get("market", "Doble oportunidad")),
+				"pick": str(pick_dc.get("pick", "Sin dato")),
+				"probability": prob,
+				"probability_text": f"{prob:.2f}".replace(".", ","),
+				"fair_odds": fair_odds,
+				"fair_odds_text": f"{fair_odds:.2f}".replace(".", ","),
+			}
+		)
+
+	entries = sorted(entries, key=lambda item: (item["sort_date"], -float(item["probability"]), item["kickoff"]))
+
+	buffer = BytesIO()
+	doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=0.5*inch, leftMargin=0.5*inch, topMargin=0.5*inch, bottomMargin=0.5*inch)
+	styles = getSampleStyleSheet()
+	story = []
+
+	title_style = ParagraphStyle("TitleDC", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=22, textColor=colors.HexColor("#0f3d28"), alignment=1, spaceAfter=6)
+	subtitle_style = ParagraphStyle("SubDC", parent=styles["Normal"], fontName="Helvetica", fontSize=10, textColor=colors.HexColor("#1a7d5c"), alignment=1, spaceAfter=16)
+	header_style = ParagraphStyle("HeaderDC", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=11, textColor=colors.white, spaceAfter=6, spaceBefore=10)
+
+	window_label = f"{window_start.strftime('%d/%m/%Y')} al {window_end.strftime('%d/%m/%Y')}"
+	story.append(Paragraph("MEJORES APUESTAS DOBLE OPORTUNIDAD", title_style))
+	story.append(Paragraph(f"Ventana: {window_label}", subtitle_style))
+
+	grouped: dict[str, list[dict[str, object]]] = {}
+	for item in entries:
+		grouped.setdefault(str(item["date_label"]), []).append(item)
+
+	for date_label in sorted(grouped.keys()):
+		head = Table([[Paragraph(f"FECHA: {date_label}", header_style)]], colWidths=[7.5*inch])
+		head.setStyle(TableStyle([
+			("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1a7d5c")),
+			("LEFTPADDING", (0, 0), (-1, -1), 10),
+			("TOPPADDING", (0, 0), (-1, -1), 8),
+			("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+		]))
+		story.append(head)
+		story.append(Spacer(1, 0.08*inch))
+
+		rows = [["#", "Encuentro", "Liga", "Doble oportunidad", "Prob.", "Cuota justa"]]
+		for idx, item in enumerate(grouped[date_label], 1):
+			rows.append([
+				str(idx),
+				f"{item['home_team']} vs {item['away_team']} ({item['kickoff']})",
+				str(item["league_name"]),
+				str(item["pick"]),
+				f"{item['probability_text']}%",
+				str(item["fair_odds_text"]),
+			])
+
+		table = Table(rows, colWidths=[0.4*inch, 2.8*inch, 1.35*inch, 1.1*inch, 0.8*inch, 1.05*inch])
+		table.setStyle(TableStyle([
+			("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8f5f0")),
+			("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f3d28")),
+			("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+			("FONTSIZE", (0, 0), (-1, -1), 8),
+			("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#a7d7c4")),
+			("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+			("LEFTPADDING", (0, 0), (-1, -1), 5),
+			("RIGHTPADDING", (0, 0), (-1, -1), 5),
+		]))
+		story.append(table)
+		story.append(Spacer(1, 0.15*inch))
+
+	doc.build(story)
+	buffer.seek(0)
+	response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_doble_oportunidad_{window_start.strftime("%d_%m_%Y")}.pdf"'
+	return response
+
+
+def best_bets_totals_pdf(request):
+	"""Generar PDF de mercados Totales (Over 1.5/2.5 y Under 3.5/4.5) por fecha."""
+	entries: list[dict[str, object]] = []
+	today = datetime.now().date()
+
+	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
+	for liga, factory in LEAGUE_SERVICE_FACTORIES.items():
+		service = factory()
+		for fixture in service.get_pending_fixtures():
+			sort_date = _parse_fixture_date(str(fixture["fecha"]))
+			if sort_date is None or sort_date < today:
+				continue
+			eligible_fixtures.append((liga, service, fixture, sort_date))
+
+	if not eligible_fixtures:
+		return HttpResponse("No hay encuentros pendientes.", content_type="text/plain")
+
+	window_start = min(row[3] for row in eligible_fixtures)
+	window_end = window_start + timedelta(days=1)
+	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
+
+	for _liga, service, fixture, sort_date in window_fixtures:
+		try:
+			prediction = service.predict_match(fixture["match_key"])
+		except ValueError:
+			continue
+
+		totals = prediction.get("markets", {}).get("totales", {})
+		o15 = float(totals.get("over_1_5", 0.0))
+		o25 = float(totals.get("over_2_5", 0.0))
+		u35 = float(totals.get("under_3_5", 0.0))
+		u45 = float(totals.get("under_4_5", 0.0))
+		options = [
+			("Over 1.5", o15),
+			("Over 2.5", o25),
+			("Under 3.5", u35),
+			("Under 4.5", u45),
+		]
+		best_pick, best_prob = max(options, key=lambda item: item[1])
+
+		entries.append(
+			{
+				"sort_date": sort_date,
+				"date_label": str(fixture["fecha"]),
+				"league_name": service.league_name,
+				"home_team": str(fixture["local"]),
+				"away_team": str(fixture["visitante"]),
+				"kickoff": str(fixture["hora"]),
+				"over_1_5": o15,
+				"over_2_5": o25,
+				"under_3_5": u35,
+				"under_4_5": u45,
+				"best_pick": best_pick,
+				"best_prob": best_prob,
+			}
+		)
+
+	entries = sorted(entries, key=lambda item: (item["sort_date"], -float(item["best_prob"]), item["kickoff"]))
+
+	buffer = BytesIO()
+	doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=0.35*inch, leftMargin=0.35*inch, topMargin=0.5*inch, bottomMargin=0.5*inch)
+	styles = getSampleStyleSheet()
+	story = []
+
+	title_style = ParagraphStyle("TitleTotals", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=20, textColor=colors.HexColor("#0f3d28"), alignment=1, spaceAfter=6)
+	subtitle_style = ParagraphStyle("SubTotals", parent=styles["Normal"], fontName="Helvetica", fontSize=10, textColor=colors.HexColor("#1a7d5c"), alignment=1, spaceAfter=14)
+	header_style = ParagraphStyle("HeaderTotals", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=10, textColor=colors.white, spaceAfter=6, spaceBefore=8)
+
+	window_label = f"{window_start.strftime('%d/%m/%Y')} al {window_end.strftime('%d/%m/%Y')}"
+	story.append(Paragraph("REPORTE TOTALES: O1.5, O2.5, U3.5, U4.5", title_style))
+	story.append(Paragraph(f"Ventana: {window_label}", subtitle_style))
+
+	grouped: dict[str, list[dict[str, object]]] = {}
+	for item in entries:
+		grouped.setdefault(str(item["date_label"]), []).append(item)
+
+	for date_label in sorted(grouped.keys()):
+		head = Table([[Paragraph(f"FECHA: {date_label}", header_style)]], colWidths=[7.7*inch])
+		head.setStyle(TableStyle([
+			("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1a7d5c")),
+			("LEFTPADDING", (0, 0), (-1, -1), 10),
+			("TOPPADDING", (0, 0), (-1, -1), 8),
+			("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+		]))
+		story.append(head)
+		story.append(Spacer(1, 0.08*inch))
+
+		rows = [["#", "Encuentro", "Liga", "O1.5", "O2.5", "U3.5", "U4.5", "Mejor pick"]]
+		for idx, item in enumerate(grouped[date_label], 1):
+			rows.append([
+				str(idx),
+				f"{item['home_team']} vs {item['away_team']} ({item['kickoff']})",
+				str(item["league_name"]),
+				f"{float(item['over_1_5']):.2f}%".replace(".", ","),
+				f"{float(item['over_2_5']):.2f}%".replace(".", ","),
+				f"{float(item['under_3_5']):.2f}%".replace(".", ","),
+				f"{float(item['under_4_5']):.2f}%".replace(".", ","),
+				f"{item['best_pick']} ({float(item['best_prob']):.2f}%)".replace(".", ","),
+			])
+
+		table = Table(rows, colWidths=[0.35*inch, 2.15*inch, 1.05*inch, 0.58*inch, 0.58*inch, 0.58*inch, 0.58*inch, 1.73*inch])
+		table.setStyle(TableStyle([
+			("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8f5f0")),
+			("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f3d28")),
+			("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+			("FONTSIZE", (0, 0), (-1, -1), 7.5),
+			("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#a7d7c4")),
+			("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+			("LEFTPADDING", (0, 0), (-1, -1), 4),
+			("RIGHTPADDING", (0, 0), (-1, -1), 4),
+		]))
+		story.append(table)
+		story.append(Spacer(1, 0.15*inch))
+
+	doc.build(story)
+	buffer.seek(0)
+	response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+	response["Content-Disposition"] = f'attachment; filename="reporte_totales_{window_start.strftime("%d_%m_%Y")}.pdf"'
 	return response
