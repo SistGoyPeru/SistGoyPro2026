@@ -2,6 +2,7 @@
 
 import os
 import re
+from datetime import datetime, timedelta
 from functools import lru_cache
 from math import exp, factorial
 from pathlib import Path
@@ -756,6 +757,7 @@ class MatchPredictionService:
         self._team_id_cache: dict[str, int] = {}
         self._transfermarkt_url_cache: dict[str, str | None] = {}
         self._injuries_cache: dict[tuple[str, str], dict[str, str | list[dict[str, str]]]] = {}
+        self._injuries_cache_timestamp: dict[tuple[str, str], datetime] = {}
         self.league_home_goals = float(self.historical_df["FTHG"].mean())
         self.league_away_goals = float(self.historical_df["FTAG"].mean())
         self._train_model()
@@ -1088,13 +1090,32 @@ class MatchPredictionService:
         return True
 
     def _transfermarkt_players_context(self, home: str, away: str) -> dict[str, str | list[dict[str, str]]]:
+        """
+        Fetch injury info from Transfermarkt with intelligent caching and timeout handling.
+        Returns cached data if available and not expired (6 hour TTL).
+        """
+        cache_key = (home, away)
+        now = datetime.now()
+        cache_ttl = timedelta(hours=6)
+        
+        # Check in-memory cache with timestamp
+        if cache_key in self._injuries_cache:
+            cached_time = self._injuries_cache_timestamp.get(cache_key)
+            if cached_time and (now - cached_time) < cache_ttl:
+                return self._injuries_cache[cache_key]
+        
         injuries: list[dict[str, str]] = []
         for team in [home, away]:
             injuries_url = self._transfermarkt_injuries_url(team)
             if not injuries_url:
                 continue
             try:
-                response = requests.get(injuries_url, headers=self._browser_headers(), timeout=(3, 4))
+                # Timeout: 10s connect, 12s read (total ~12s per request, 2 teams = ~24s max)
+                response = requests.get(
+                    injuries_url, 
+                    headers=self._browser_headers(), 
+                    timeout=(10, 12)
+                )
                 response.raise_for_status()
                 soup = BeautifulSoup(response.text, "html.parser")
                 valid_tables = []
@@ -1128,16 +1149,38 @@ class MatchPredictionService:
                                 "importance_score": str(round(importance_score, 2)),
                             }
                         )
+            except (requests.Timeout, requests.ConnectionError):
+                # Network timeout: skip this team, use previously cached data if available
+                if cache_key in self._injuries_cache:
+                    return self._injuries_cache[cache_key]
+                continue
+            except requests.RequestException:
+                # Other request errors (403, 404, etc.): skip
+                continue
             except Exception:
+                # Any parsing or other errors: skip
                 continue
 
-        if injuries:
-            return {
+        result = (
+            {
                 "status": "Disponible",
                 "note": f"{len(injuries)} bajas detectadas via scraping publico.",
                 "source": "Transfermarkt",
                 "items": injuries,
             }
+            if injuries
+            else {
+                "status": "Disponible",
+                "note": "No hay bajas reportadas.",
+                "source": "Transfermarkt",
+                "items": [],
+            }
+        )
+        
+        # Store in cache with timestamp
+        self._injuries_cache[cache_key] = result
+        self._injuries_cache_timestamp[cache_key] = now
+        return result
         return {
             "status": "No disponible",
             "note": "No se pudieron obtener bajas desde scraping publico para estos equipos.",

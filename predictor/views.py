@@ -143,6 +143,346 @@ def _value_signal(probability_pct: float, offered_odd: float | None) -> dict[str
 	}
 
 
+def _build_league_stats(service) -> dict[str, object]:
+	df = service.historical_df
+	total_matches = int(len(df))
+	if total_matches <= 0:
+		return {
+			"total_matches": 0,
+			"avg_goals": 0.0,
+			"home_win_pct": 0.0,
+			"draw_pct": 0.0,
+			"away_win_pct": 0.0,
+			"btts_pct": 0.0,
+			"over25_pct": 0.0,
+			"avg_corners": 0.0,
+			"avg_cards": 0.0,
+			"red_match_pct": 0.0,
+			"market_tone": "Sin datos",
+			"recommendations": ["No hay suficientes partidos historicos para clasificar tendencias."],
+			"top_table": [],
+		}
+
+	home_win_pct = round(float((df["FTR"] == "H").mean() * 100), 2)
+	draw_pct = round(float((df["FTR"] == "D").mean() * 100), 2)
+	away_win_pct = round(float((df["FTR"] == "A").mean() * 100), 2)
+	avg_goals = round(float((df["FTHG"] + df["FTAG"]).mean()), 2)
+	btts_pct = round(float(((df["FTHG"] > 0) & (df["FTAG"] > 0)).mean() * 100), 2)
+	over25_pct = round(float(((df["FTHG"] + df["FTAG"]) > 2).mean() * 100), 2)
+	avg_corners = round(float((df["HC"] + df["AC"]).mean()), 2)
+	avg_cards = round(float((df["HY"] + df["AY"] + df["HR"] + df["AR"]).mean()), 2)
+	red_match_pct = round(float(((df["HR"] + df["AR"]) > 0).mean() * 100), 2)
+
+	if avg_goals >= 2.85:
+		market_tone = "Liga de ritmo alto"
+	elif avg_goals >= 2.45:
+		market_tone = "Liga equilibrada"
+	else:
+		market_tone = "Liga de control tactico"
+
+	recommendations: list[str] = []
+	if over25_pct >= 56:
+		recommendations.append("Prioriza mercados de goles (Over 2.5 / BTTS) en prepartido.")
+	elif over25_pct <= 44:
+		recommendations.append("Prioriza unders y lineas conservadoras de goles.")
+	else:
+		recommendations.append("Mercado de goles mixto: conviene filtrar por forma del partido.")
+
+	if home_win_pct - away_win_pct >= 12:
+		recommendations.append("Existe sesgo local fuerte: prioriza 1X o local DNB en equipos top.")
+	elif away_win_pct >= home_win_pct:
+		recommendations.append("Sin sesgo local marcado: evita sobrepagar cuotas del favorito local.")
+	else:
+		recommendations.append("Sesgo local moderado: combina 1X2 con contexto de forma reciente.")
+
+	if avg_cards >= 4.8 or red_match_pct >= 20:
+		recommendations.append("Perfil de contacto alto: hay valor en tarjetas over y props disciplinarios.")
+	else:
+		recommendations.append("Disciplina estable: mejor usar tarjetas como mercado complementario.")
+
+	top_table_raw = sorted(
+		service.standings_snapshot.values(),
+		key=lambda row: (row.get("points", 0), row.get("gd", 0), row.get("gf", 0)),
+		reverse=True,
+	)[:5]
+	top_table = [
+		{
+			"position": team.get("position", 0),
+			"team": team.get("team", ""),
+			"points": team.get("points", 0),
+			"gd": team.get("gd", 0),
+		}
+		for team in top_table_raw
+	]
+
+	return {
+		"total_matches": total_matches,
+		"avg_goals": avg_goals,
+		"home_win_pct": home_win_pct,
+		"draw_pct": draw_pct,
+		"away_win_pct": away_win_pct,
+		"btts_pct": btts_pct,
+		"over25_pct": over25_pct,
+		"avg_corners": avg_corners,
+		"avg_cards": avg_cards,
+		"red_match_pct": red_match_pct,
+		"market_tone": market_tone,
+		"recommendations": recommendations,
+		"top_table": top_table,
+	}
+
+
+def _best_bets_snapshot(max_items: int = 8) -> dict[str, object]:
+	today = datetime.now().date()
+	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
+
+	for liga_key, factory in LEAGUE_SERVICE_FACTORIES.items():
+		service = factory()
+		for fixture in service.get_pending_fixtures():
+			date_label = str(fixture.get("fecha", ""))
+			sort_date = _parse_fixture_date(date_label)
+			if sort_date is None or sort_date < today:
+				continue
+			eligible_fixtures.append((liga_key, service, fixture, sort_date))
+
+	if not eligible_fixtures:
+		return {
+			"window_label": "sin encuentros pendientes",
+			"entries": [],
+			"total_count": 0,
+		}
+
+	window_start = min(row[3] for row in eligible_fixtures)
+	window_end = window_start + timedelta(days=1)
+	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
+
+	entries: list[dict[str, object]] = []
+	for liga_key, service, fixture, sort_date in window_fixtures:
+		try:
+			quick_prediction = service.predict_recommended_bet_fast(str(fixture.get("match_key", "")))
+		except Exception:
+			continue
+
+		recommended = quick_prediction.get("recommended_bet", {})
+		multiple = quick_prediction.get("multiple", {})
+		entries.append(
+			{
+				"date_label": str(fixture.get("fecha", "")),
+				"sort_date": sort_date,
+				"league_key": liga_key,
+				"league_name": service.league_name,
+				"league_logo_url": service.league_logo_url,
+				"match_key": str(fixture.get("match_key", "")),
+				"kickoff": str(fixture.get("hora", "")),
+				"home_team": str(fixture.get("local", "")),
+				"away_team": str(fixture.get("visitante", "")),
+				"market": str(recommended.get("market", "Sin datos")),
+				"pick": str(recommended.get("pick", "Sin recomendacion")),
+				"probability": float(recommended.get("probability", 0.0)),
+				"confidence": str(recommended.get("confidence", "Baja")),
+				"multiple_confidence": str(multiple.get("confidence", "Baja")),
+				"multiple_combined_probability": float(multiple.get("prob_combinada", 0.0)),
+				"dashboard_url": f"/?liga={liga_key}&match_key={fixture.get('match_key', '')}",
+			}
+		)
+
+	entries = sorted(
+		entries,
+		key=lambda item: (
+			item["sort_date"],
+			-float(item.get("multiple_combined_probability", 0.0)),
+			-float(item.get("probability", 0.0)),
+			item.get("kickoff", ""),
+		),
+	)
+
+	window_label = f"{window_start.strftime('%d/%m/%Y')} y {window_end.strftime('%d/%m/%Y')}"
+	return {
+		"window_label": window_label,
+		"entries": entries[:max_items],
+		"total_count": len(entries),
+	}
+
+
+def _build_multileague_home(selected_date_raw: str | None) -> dict[str, object]:
+	today = datetime.now().date()
+	eligible: list[tuple[str, object, dict[str, object], object]] = []
+
+	for liga_key, factory in LEAGUE_SERVICE_FACTORIES.items():
+		service = factory()
+		for fixture in service.get_pending_fixtures():
+			sort_date = _parse_fixture_date(str(fixture.get("fecha", "")))
+			if sort_date is None or sort_date < today:
+				continue
+			eligible.append((liga_key, service, fixture, sort_date))
+
+	if not eligible:
+		return {
+			"selected_date_label": "sin fecha",
+			"date_options": [],
+			"league_cards": [],
+			"entries": [],
+		}
+
+	available_dates = sorted({row[3] for row in eligible})
+	selected_date = None
+	if selected_date_raw:
+		try:
+			selected_date = datetime.strptime(selected_date_raw, "%Y-%m-%d").date()
+		except ValueError:
+			selected_date = None
+	if selected_date is None or selected_date not in available_dates:
+		selected_date = available_dates[0]
+
+	target_fixtures = [row for row in eligible if row[3] == selected_date]
+	entries: list[dict[str, object]] = []
+	for liga_key, service, fixture, sort_date in target_fixtures:
+		try:
+			quick_prediction = service.predict_recommended_bet_fast(str(fixture.get("match_key", "")))
+		except Exception:
+			continue
+
+		recommended = quick_prediction.get("recommended_bet", {})
+		multiple = quick_prediction.get("multiple", {})
+		entries.append(
+			{
+				"date_label": str(fixture.get("fecha", "")),
+				"league_key": liga_key,
+				"league_name": service.league_name,
+				"league_logo_url": service.league_logo_url,
+				"match_key": str(fixture.get("match_key", "")),
+				"kickoff": str(fixture.get("hora", "")),
+				"home_team": str(fixture.get("local", "")),
+				"away_team": str(fixture.get("visitante", "")),
+				"market": str(recommended.get("market", "Sin datos")),
+				"pick": str(recommended.get("pick", "Sin recomendacion")),
+				"probability": float(recommended.get("probability", 0.0)),
+				"confidence": str(recommended.get("confidence", "Baja")),
+				"multiple_confidence": str(multiple.get("confidence", "Baja")),
+				"multiple_combined_probability": float(multiple.get("prob_combinada", 0.0)),
+				"dashboard_url": f"/?liga={liga_key}&match_key={fixture.get('match_key', '')}",
+			}
+		)
+
+	def _kickoff_sort_value(value: object) -> tuple[int, int]:
+		text = str(value or "").strip()
+		if ":" not in text:
+			return (99, 99)
+		parts = text.split(":", 1)
+		try:
+			hour = int(parts[0])
+			minute = int(parts[1])
+		except ValueError:
+			return (99, 99)
+		return (hour, minute)
+
+	entries = sorted(
+		entries,
+		key=lambda item: (
+			_kickoff_sort_value(item.get("kickoff", "")),
+			-float(item.get("multiple_combined_probability", 0.0)),
+			-float(item.get("probability", 0.0)),
+		),
+	)
+
+	league_cards_map: dict[str, dict[str, object]] = {}
+	for row in entries:
+		card = league_cards_map.setdefault(
+			str(row["league_key"]),
+			{
+				"league_key": row["league_key"],
+				"league_name": row["league_name"],
+				"league_logo_url": row["league_logo_url"],
+				"match_count": 0,
+				"avg_probability": 0.0,
+				"top_pick": "Sin pick",
+				"top_pick_probability": 0.0,
+			},
+		)
+		card["match_count"] = int(card["match_count"]) + 1
+		card["avg_probability"] = float(card["avg_probability"]) + float(row.get("probability", 0.0))
+		if float(row.get("probability", 0.0)) > float(card.get("top_pick_probability", 0.0)):
+			card["top_pick_probability"] = float(row.get("probability", 0.0))
+			card["top_pick"] = str(row.get("pick", "Sin pick"))
+
+	league_cards = []
+	for card in league_cards_map.values():
+		count = int(card["match_count"])
+		avg_prob = (float(card["avg_probability"]) / count) if count else 0.0
+		league_cards.append(
+			{
+				**card,
+				"avg_probability": round(avg_prob, 2),
+			}
+		)
+
+	league_cards = sorted(league_cards, key=lambda item: (-float(item["avg_probability"]), -int(item["match_count"])))
+	date_options = [
+		{
+			"value": date_item.strftime("%Y-%m-%d"),
+			"label": date_item.strftime("%d/%m/%Y"),
+			"is_selected": date_item == selected_date,
+		}
+		for date_item in available_dates
+	]
+
+	return {
+		"selected_date_label": selected_date.strftime("%d/%m/%Y"),
+		"date_options": date_options,
+		"league_cards": league_cards,
+		"entries": entries,
+	}
+
+
+def _build_home_rankings() -> dict[str, list[dict[str, object]]]:
+	rank_1x2: list[dict[str, object]] = []
+	rank_over15: list[dict[str, object]] = []
+	rank_under45: list[dict[str, object]] = []
+	rank_avg_goals: list[dict[str, object]] = []
+	rank_over25: list[dict[str, object]] = []
+	rank_under35: list[dict[str, object]] = []
+	rank_btts: list[dict[str, object]] = []
+
+	for _, factory in LEAGUE_SERVICE_FACTORIES.items():
+		service = factory()
+		df = service.historical_df
+		total_matches = int(len(df))
+		if total_matches <= 0:
+			continue
+
+		results = df["FTR"].astype(str)
+		one_x_two_top = max(
+			float((results == "H").mean() * 100),
+			float((results == "D").mean() * 100),
+			float((results == "A").mean() * 100),
+		)
+		over15 = float(((df["FTHG"] + df["FTAG"]) > 1).mean() * 100)
+		over25 = float(((df["FTHG"] + df["FTAG"]) > 2).mean() * 100)
+		under35 = float(((df["FTHG"] + df["FTAG"]) < 4).mean() * 100)
+		under45 = float(((df["FTHG"] + df["FTAG"]) < 5).mean() * 100)
+		btts = float(((df["FTHG"] > 0) & (df["FTAG"] > 0)).mean() * 100)
+		avg_goals = float((df["FTHG"] + df["FTAG"]).mean())
+
+		base = {"league": service.league_name}
+		rank_1x2.append({**base, "value": round(one_x_two_top, 2)})
+		rank_over15.append({**base, "value": round(over15, 2)})
+		rank_over25.append({**base, "value": round(over25, 2)})
+		rank_under35.append({**base, "value": round(under35, 2)})
+		rank_under45.append({**base, "value": round(under45, 2)})
+		rank_btts.append({**base, "value": round(btts, 2)})
+		rank_avg_goals.append({**base, "value": round(avg_goals, 2)})
+
+	return {
+		"top_1x2": sorted(rank_1x2, key=lambda item: float(item["value"]), reverse=True),
+		"top_over15": sorted(rank_over15, key=lambda item: float(item["value"]), reverse=True),
+		"top_under45": sorted(rank_under45, key=lambda item: float(item["value"]), reverse=True),
+		"top_avg_goals": sorted(rank_avg_goals, key=lambda item: float(item["value"]), reverse=True),
+		"top_over25": sorted(rank_over25, key=lambda item: float(item["value"]), reverse=True),
+		"top_under35": sorted(rank_under35, key=lambda item: float(item["value"]), reverse=True),
+		"top_btts": sorted(rank_btts, key=lambda item: float(item["value"]), reverse=True),
+	}
+
+
 def dashboard(request):
 	liga = request.GET.get("liga") or request.POST.get("liga", "spain")
 	if liga not in ("spain", "bundesliga", "premier", "seriea", "ligue1", "primeiraliga", "proleague", "eredivisie"):
@@ -157,8 +497,32 @@ def dashboard(request):
 			refresh_status = f"No se pudo refrescar enlaces en este acceso: {exc}"
 
 	service = _get_service(liga)
+	league_stats = _build_league_stats(service)
+	best_bets_snapshot = _best_bets_snapshot(max_items=8)
+	multileague_home = _build_multileague_home(request.GET.get("home_date"))
+	home_rankings = _build_home_rankings()
 	fixtures = service.get_pending_fixtures()
 	selected_match_key = request.POST.get("match_key") or request.GET.get("match_key", "")
+	sportsbook_rows: list[dict[str, object]] = []
+	for fixture in fixtures[:8]:
+		try:
+			match_prediction = service.predict_match(str(fixture.get("match_key", "")))
+			totals_market = match_prediction.get("markets", {}).get("totales", {})
+			over_1_5 = float(totals_market.get("over_1_5", 0.0))
+			under_3_5 = float(totals_market.get("under_3_5", 0.0))
+			under_4_5 = float(totals_market.get("under_4_5", 0.0))
+			sportsbook_rows.append(
+				{
+					"local": fixture.get("local", ""),
+					"visitante": fixture.get("visitante", ""),
+					"hora": fixture.get("hora", ""),
+					"odd_over_1_5": _fair_odds(over_1_5),
+					"odd_under_3_5": _fair_odds(under_3_5),
+					"odd_under_4_5": _fair_odds(under_4_5),
+				}
+			)
+		except Exception:
+			continue
 
 	prediction = None
 	error_message = ""
@@ -188,6 +552,11 @@ def dashboard(request):
 		"model_scores": service.model_scores,
 		"error_message": error_message,
 		"refresh_status": refresh_status,
+		"league_stats": league_stats,
+		"sportsbook_rows": sportsbook_rows,
+		"best_bets_snapshot": best_bets_snapshot,
+		"multileague_home": multileague_home,
+		"home_rankings": home_rankings,
 	}
 	context["market_min_prob_rows"] = [
 		{"label": "Umbral 1X2", "value": service.market_min_prob.get("1X2", service.no_bet_min_prob)},
@@ -197,7 +566,7 @@ def dashboard(request):
 		{"label": "Umbral corners", "value": service.market_min_prob.get("Corners", service.no_bet_min_prob)},
 		{"label": "Umbral tarjetas", "value": service.market_min_prob.get("Tarjetas totales", service.no_bet_min_prob)},
 	]
-	return render(request, "predictor/dashboard.html", context)
+	return render(request, "predictor/home_dashboard.html", context)
 
 
 def best_bets_by_date(request):

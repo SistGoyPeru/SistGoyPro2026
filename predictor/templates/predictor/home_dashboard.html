@@ -1,0 +1,428 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SistGoy Análisis PRO</title>
+    <link rel="icon" type="image/jpeg" href="{% static 'predictor/brand/logo.jpg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-1: #073320;
+            --bg-2: #0e4e33;
+            --bg-3: #092516;
+            --panel: rgba(8, 33, 22, 0.9);
+            --panel-soft: rgba(12, 44, 29, 0.78);
+            --line: rgba(186, 224, 199, 0.18);
+            --text: #edf7f0;
+            --muted: #a7c7b7;
+            --accent: #f6cf55;
+            --ok: #6ce3a3;
+            --warn: #f7bf68;
+            --bad: #f28b5a;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Source Sans 3", "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 16% 9%, rgba(246, 207, 85, 0.14), transparent 28%),
+                radial-gradient(circle at 84% 10%, rgba(108, 227, 163, 0.14), transparent 24%),
+                linear-gradient(168deg, var(--bg-1), var(--bg-2) 50%, var(--bg-3));
+            min-height: 100vh;
+        }
+
+        .wrap {
+            width: min(1400px, 100%);
+            margin: 0 auto;
+            padding: 14px;
+        }
+
+        .top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: linear-gradient(90deg, #016d48, #0b8d5b);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 12px;
+            margin-bottom: 14px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand img {
+            width: 34px;
+            height: 34px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #ffe57b;
+            font-size: 1.3rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9px;
+            border: 1px solid rgba(255,255,255,0.22);
+            padding: 8px 10px;
+            text-decoration: none;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            color: #eaf6f0;
+            background: rgba(0,0,0,0.18);
+        }
+
+        .btn.gold {
+            border-color: rgba(246, 207, 85, 0.42);
+            background: rgba(246, 207, 85, 0.16);
+            color: #ffe58f;
+        }
+
+        .hero {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .hero h2 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            font-size: clamp(1.35rem, 3.8vw, 2rem);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .hero p {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .chip {
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.18);
+            color: #d6eadf;
+            text-decoration: none;
+            background: rgba(255,255,255,0.03);
+            padding: 6px 10px;
+            font-size: 0.77rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 700;
+        }
+
+        .chip.active {
+            border-color: rgba(246, 207, 85, 0.5);
+            background: rgba(246, 207, 85, 0.14);
+            color: #f6cf55;
+        }
+
+        .agenda {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .title-row h3 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #f6cf55;
+            font-size: 1.15rem;
+        }
+
+        .title-row .meta {
+            color: var(--muted);
+            font-size: 0.84rem;
+        }
+
+        .agenda-list {
+            display: grid;
+            gap: 7px;
+        }
+
+        .agenda-item {
+            display: grid;
+            grid-template-columns: 70px 1fr 135px;
+            gap: 10px;
+            align-items: center;
+            background: var(--panel-soft);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 8px 9px;
+        }
+
+        .agenda-time {
+            font-weight: 700;
+            color: #d9efe3;
+        }
+
+        .agenda-match {
+            color: #e8f4ee;
+            font-size: 0.88rem;
+        }
+
+        .agenda-league {
+            color: var(--muted);
+            font-size: 0.74rem;
+        }
+
+        .agenda-pick {
+            text-align: right;
+        }
+
+        .agenda-pick a {
+            color: #9cf0c4;
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .rank-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 12px;
+        }
+
+        .rank-card h4 {
+            margin: 0 0 8px;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #f6cf55;
+            font-size: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(255,255,255,0.05);
+            color: #cfe6d9;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.7rem;
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        td.value {
+            text-align: right;
+            font-weight: 700;
+            color: #f6cf55;
+        }
+
+        .footer {
+            margin-top: 14px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.8rem;
+            padding: 12px;
+            border-top: 1px solid rgba(255,255,255,0.12);
+        }
+
+        @media (max-width: 1000px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .agenda-item { grid-template-columns: 58px 1fr; }
+            .agenda-pick { text-align: left; grid-column: 2; }
+        }
+
+        @media (max-width: 600px) {
+            .wrap { padding: 10px; }
+            .brand h1 { font-size: 1.05rem; }
+            .hero p { font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header class="top">
+            <div class="brand">
+                <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoy PRO">
+                <h1>SistGoy Análisis PRO</h1>
+            </div>
+            <a class="btn gold" href="{% url 'best_bets_by_date' %}">Mejores apuestas por fecha</a>
+        </header>
+
+        <section class="hero">
+            <h2>Estadísticas avanzadas y predicciones en tiempo real</h2>
+            <p>Dashboard principal con agenda del día y rankings de rendimiento por mercado para todas las ligas disponibles.</p>
+            <div class="chips">
+                {% for date_item in multileague_home.date_options %}
+                <a href="?home_date={{ date_item.value }}{% if liga %}&liga={{ liga }}{% endif %}{% if selected_match_key %}&match_key={{ selected_match_key }}{% endif %}" class="chip {% if date_item.is_selected %}active{% endif %}">{{ date_item.label }}</a>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="agenda">
+            <div class="title-row">
+                <h3>Agenda del día</h3>
+                <span class="meta">{{ multileague_home.entries|length }} eventos programados | Fecha: {{ multileague_home.selected_date_label }}</span>
+            </div>
+            <div class="agenda-list">
+                {% for item in multileague_home.entries %}
+                <article class="agenda-item">
+                    <div class="agenda-time">{{ item.kickoff }}</div>
+                    <div>
+                        <div class="agenda-league">{{ item.league_name }}</div>
+                        <div class="agenda-match">{{ item.home_team }} - {{ item.away_team }}</div>
+                    </div>
+                    <div class="agenda-pick"><a href="{{ item.dashboard_url }}">Ver pronóstico</a></div>
+                </article>
+                {% empty %}
+                <article class="agenda-item">
+                    <div class="agenda-time">--:--</div>
+                    <div>
+                        <div class="agenda-league">Sin agenda</div>
+                        <div class="agenda-match">No hay partidos para esta fecha.</div>
+                    </div>
+                    <div class="agenda-pick">-</div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="dashboard-grid">
+            <article class="rank-card">
+                <h4>Media goles</h4>
+                <table>
+                    <thead><tr><th>Liga</th><th class="value">Avg</th></tr></thead>
+                    <tbody>
+                        {% for row in home_rankings.top_avg_goals %}
+                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+
+            <article class="rank-card">
+                <h4>Top aciertos (Over 1.5)</h4>
+                <table>
+                    <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
+                    <tbody>
+                        {% for row in home_rankings.top_over15 %}
+                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+
+            <article class="rank-card">
+                <h4>Over 2.5</h4>
+                <table>
+                    <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
+                    <tbody>
+                        {% for row in home_rankings.top_over25 %}
+                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+
+            <article class="rank-card">
+                <h4>Under 3.5 goles</h4>
+                <table>
+                    <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
+                    <tbody>
+                        {% for row in home_rankings.top_under35 %}
+                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+
+            <article class="rank-card">
+                <h4>Under 4.5 goles</h4>
+                <table>
+                    <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
+                    <tbody>
+                        {% for row in home_rankings.top_under45 %}
+                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+
+            <article class="rank-card">
+                <h4>Ambos marcan</h4>
+                <table>
+                    <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
+                    <tbody>
+                        {% for row in home_rankings.top_btts %}
+                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+        </section>
+
+        <footer class="footer">
+            SistGoy PRO © 2026 | La información es para análisis deportivo y entretenimiento.
+        </footer>
+    </div>
+</body>
+</html>

@@ -804,6 +804,478 @@
             border-color: rgba(246, 207, 85, 0.5);
         }
 
+        .sportsbook-mobile {
+            margin: 0 0 22px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.14);
+            background: #2d2f34;
+            box-shadow: 0 16px 38px rgba(0,0,0,0.34);
+        }
+
+        .home-hub {
+            margin: 0 0 22px;
+            padding: 18px;
+            background: linear-gradient(140deg, rgba(8, 42, 26, 0.94), rgba(6, 27, 18, 0.95));
+            border: 1px solid rgba(183, 221, 194, 0.2);
+            border-radius: 18px;
+        }
+
+        .home-hub-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .home-hub-head h2 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #f6cf55;
+            font-size: 1.45rem;
+        }
+
+        .home-hub-head p {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .home-date-nav {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 0 0 14px;
+        }
+
+        .home-date-pill {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.18);
+            color: #d5e8dd;
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .home-date-pill.active {
+            border-color: rgba(246, 207, 85, 0.5);
+            background: rgba(246, 207, 85, 0.14);
+            color: #f6cf55;
+        }
+
+        .league-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 0 0 14px;
+        }
+
+        .league-home-card {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .league-home-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .league-home-title img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+
+        .league-home-title strong {
+            font-size: 0.84rem;
+            color: #eaf4ee;
+        }
+
+        .league-home-meta {
+            display: grid;
+            gap: 4px;
+            color: #cde1d5;
+            font-size: 0.78rem;
+        }
+
+        .home-main-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .home-main-table th,
+        .home-main-table td {
+            padding: 9px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            text-align: left;
+            font-size: 0.84rem;
+        }
+
+        .home-main-table th {
+            color: #d5e8dd;
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            background: rgba(255,255,255,0.04);
+        }
+
+        .home-main-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .sb-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            background: linear-gradient(90deg, #006d4a, #0b8f5d);
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .sb-brand {
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            font-size: 1rem;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            color: #ffde59;
+        }
+
+        .sb-links {
+            display: flex;
+            gap: 10px;
+            color: #d8efe4;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .sb-sports-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            background: #3a3d44;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .sb-sport-item {
+            padding: 8px 6px;
+            text-align: center;
+            border-right: 1px solid rgba(255,255,255,0.07);
+        }
+
+        .sb-sport-item:last-child {
+            border-right: none;
+        }
+
+        .sb-sport-icon {
+            display: block;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .sb-sport-name {
+            display: block;
+            font-size: 0.7rem;
+            color: #c9d0d7;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .sb-market-header {
+            display: grid;
+            grid-template-columns: 1fr 72px 72px 72px;
+            padding: 8px 10px;
+            background: #15865a;
+            color: #f1fbf6;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+        }
+
+        .sb-market-header span:not(:first-child) {
+            text-align: center;
+        }
+
+        .sb-board {
+            background: #44474f;
+        }
+
+        .sb-row {
+            display: grid;
+            grid-template-columns: 1fr 72px 72px 72px;
+            align-items: stretch;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .sb-match {
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .sb-teams {
+            color: #f4f7fb;
+            font-weight: 600;
+            font-size: 0.84rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sb-time {
+            font-size: 0.72rem;
+            color: #aeb6bf;
+        }
+
+        .sb-odd {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-left: 1px solid rgba(255,255,255,0.08);
+            color: #ffde59;
+            font-weight: 700;
+            font-size: 0.94rem;
+            background: rgba(34, 36, 41, 0.45);
+        }
+
+        .league-intel {
+            margin: 0 0 22px;
+            padding: 18px;
+            background: linear-gradient(135deg, rgba(8, 42, 26, 0.9), rgba(6, 27, 18, 0.92));
+        }
+
+        .league-intel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .league-intel-head h3 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #f6cf55;
+            font-size: 1.2rem;
+        }
+
+        .league-intel-head span {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .intel-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .intel-card {
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .intel-card span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .intel-card strong {
+            display: block;
+            font-size: 1.25rem;
+            line-height: 1;
+            color: #ffffff;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+        }
+
+        .intel-columns {
+            display: grid;
+            grid-template-columns: 1.25fr 0.75fr;
+            gap: 12px;
+        }
+
+        .intel-list,
+        .intel-ranking {
+            margin: 0;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .intel-list li,
+        .intel-ranking li {
+            color: #d6e7dd;
+            margin: 8px 0;
+            line-height: 1.35;
+        }
+
+        .intel-ranking {
+            list-style: none;
+            padding: 10px 12px;
+        }
+
+        .intel-ranking li {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 7px 0;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .intel-ranking li:last-child {
+            border-bottom: none;
+        }
+
+        .intel-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 9px;
+            border-radius: 999px;
+            border: 1px solid rgba(108, 227, 163, 0.32);
+            background: rgba(108, 227, 163, 0.1);
+            color: #9cf0c4;
+            font-size: 0.77rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .best-date-panel {
+            margin: 0 0 22px;
+            padding: 18px;
+            background: linear-gradient(135deg, rgba(9, 45, 28, 0.9), rgba(7, 31, 20, 0.92));
+        }
+
+        .best-date-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .best-date-head h3 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #f6cf55;
+            font-size: 1.18rem;
+        }
+
+        .best-date-head span {
+            color: var(--muted);
+            font-size: 0.86rem;
+        }
+
+        .best-date-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .best-date-table th,
+        .best-date-table td {
+            padding: 9px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        .best-date-table th {
+            color: #d5e8dd;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.73rem;
+            background: rgba(255,255,255,0.04);
+        }
+
+        .best-date-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .best-date-pill {
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .best-date-pill.alta {
+            color: #9cf0c4;
+            background: rgba(108,227,163,0.12);
+            border-color: rgba(108,227,163,0.32);
+        }
+
+        .best-date-pill.media {
+            color: #f6cf55;
+            background: rgba(246,207,85,0.14);
+            border-color: rgba(246,207,85,0.32);
+        }
+
+        .best-date-pill.baja {
+            color: #f2b88f;
+            background: rgba(242,139,90,0.13);
+            border-color: rgba(242,139,90,0.3);
+        }
+
+        .best-date-link {
+            display: inline-flex;
+            margin-top: 12px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            border: 1px solid rgba(246, 207, 85, 0.35);
+            background: rgba(246, 207, 85, 0.12);
+            color: #f6cf55;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
         .league-flag { font-size: 1.1rem; }
         .league-logo {
             width: 18px;
@@ -933,6 +1405,18 @@
                 grid-template-columns: 1fr;
             }
 
+            .intel-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .intel-columns {
+                grid-template-columns: 1fr;
+            }
+
+            .league-cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
             .chart-wrap.wide {
                 grid-column: auto;
             }
@@ -1024,6 +1508,19 @@
                 padding: 16px 12px 24px;
             }
 
+            .sb-market-header,
+            .sb-row {
+                grid-template-columns: 1fr 58px 58px 58px;
+            }
+
+            .sb-odd {
+                font-size: 0.85rem;
+            }
+
+            .league-cards-grid {
+                grid-template-columns: 1fr;
+            }
+
             .fixture-name {
                 font-size: 1.7rem;
             }
@@ -1084,6 +1581,220 @@
         <div class="quick-links">
             <a class="quick-link" href="{% url 'best_bets_by_date' %}">Mejor apuesta por fecha</a>
         </div>
+
+        <section class="home-hub panel">
+            <div class="home-hub-head">
+                <div>
+                    <h2>Resumen general por fecha</h2>
+                    <p>Portada multiliga con pronósticos de mayor valor para {{ multileague_home.selected_date_label }}</p>
+                </div>
+                <a class="best-date-link" href="{% url 'best_bets_by_date' %}">Abrir vista completa</a>
+            </div>
+
+            <nav class="home-date-nav">
+                {% for date_item in multileague_home.date_options %}
+                <a href="?home_date={{ date_item.value }}{% if liga %}&liga={{ liga }}{% endif %}{% if selected_match_key %}&match_key={{ selected_match_key }}{% endif %}" class="home-date-pill {% if date_item.is_selected %}active{% endif %}">
+                    {{ date_item.label }}
+                </a>
+                {% endfor %}
+            </nav>
+
+            <div class="league-cards-grid">
+                {% for card in multileague_home.league_cards %}
+                <article class="league-home-card">
+                    <div class="league-home-title">
+                        <img src="{{ card.league_logo_url }}" alt="{{ card.league_name }}">
+                        <strong>{{ card.league_name }}</strong>
+                    </div>
+                    <div class="league-home-meta">
+                        <span>Partidos: {{ card.match_count }}</span>
+                        <span>Prob. media: {{ card.avg_probability }}%</span>
+                        <span>Top pick: {{ card.top_pick }} ({{ card.top_pick_probability|floatformat:2 }}%)</span>
+                    </div>
+                </article>
+                {% empty %}
+                <article class="league-home-card"><div class="league-home-meta"><span>Sin partidos disponibles.</span></div></article>
+                {% endfor %}
+            </div>
+
+            <table class="home-main-table">
+                <thead>
+                    <tr>
+                        <th>Liga</th>
+                        <th>Partido</th>
+                        <th>Pick por fecha</th>
+                        <th>Prob.</th>
+                        <th>Múltiple</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in multileague_home.entries %}
+                    <tr>
+                        <td>{{ item.league_name }}</td>
+                        <td>{{ item.home_team }} vs {{ item.away_team }}<br><span style="color:var(--muted);font-size:0.74rem">{{ item.kickoff }}</span></td>
+                        <td><a href="{{ item.dashboard_url }}" style="color:#d7efe3;text-decoration:none">{{ item.pick }}</a><br><span style="color:var(--muted);font-size:0.74rem">{{ item.market }}</span></td>
+                        <td>{{ item.probability|floatformat:2 }}%</td>
+                        <td>{{ item.multiple_combined_probability|floatformat:2 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">No hay pronósticos disponibles para esa fecha.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="sportsbook-mobile">
+            <div class="sb-topbar">
+                <span class="sb-brand">SistGoy Sportsbook</span>
+                <div class="sb-links">
+                    <span>Directo</span>
+                    <span>Mercados</span>
+                    <span>Sesion</span>
+                </div>
+            </div>
+            <div class="sb-sports-row">
+                <div class="sb-sport-item"><span class="sb-sport-icon">⚽</span><span class="sb-sport-name">Futbol</span></div>
+            </div>
+            <div class="sb-market-header">
+                <span>{{ league_name }} - Totales</span>
+                <span>O1.5</span>
+                <span>U3.5</span>
+                <span>U4.5</span>
+            </div>
+            <div class="sb-board">
+                {% for row in sportsbook_rows %}
+                <article class="sb-row">
+                    <div class="sb-match">
+                        <span class="sb-teams">{{ row.local }} vs {{ row.visitante }}</span>
+                        <span class="sb-time">{{ row.hora|default:"00:00" }} | previo</span>
+                    </div>
+                    <div class="sb-odd">{{ row.odd_over_1_5|floatformat:2 }}</div>
+                    <div class="sb-odd">{{ row.odd_under_3_5|floatformat:2 }}</div>
+                    <div class="sb-odd">{{ row.odd_under_4_5|floatformat:2 }}</div>
+                </article>
+                {% empty %}
+                <article class="sb-row">
+                    <div class="sb-match">
+                        <span class="sb-teams">Sin encuentros disponibles</span>
+                        <span class="sb-time">Actualiza la liga para generar tablero</span>
+                    </div>
+                    <div class="sb-odd">-</div>
+                    <div class="sb-odd">-</div>
+                    <div class="sb-odd">-</div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="panel league-intel">
+            <div class="league-intel-head">
+                <h3>Trading Room de Liga</h3>
+                <span>{{ league_stats.total_matches }} partidos analizados</span>
+            </div>
+            <div style="margin-bottom:12px">
+                <span class="intel-tag">{{ league_stats.market_tone }}</span>
+            </div>
+            <div class="intel-grid">
+                <article class="intel-card">
+                    <span>Goles promedio</span>
+                    <strong>{{ league_stats.avg_goals }}</strong>
+                </article>
+                <article class="intel-card">
+                    <span>Local gana</span>
+                    <strong>{{ league_stats.home_win_pct }}%</strong>
+                </article>
+                <article class="intel-card">
+                    <span>Empate</span>
+                    <strong>{{ league_stats.draw_pct }}%</strong>
+                </article>
+                <article class="intel-card">
+                    <span>BTTS</span>
+                    <strong>{{ league_stats.btts_pct }}%</strong>
+                </article>
+                <article class="intel-card">
+                    <span>Over 2.5</span>
+                    <strong>{{ league_stats.over25_pct }}%</strong>
+                </article>
+                <article class="intel-card">
+                    <span>Córners promedio</span>
+                    <strong>{{ league_stats.avg_corners }}</strong>
+                </article>
+                <article class="intel-card">
+                    <span>Tarjetas promedio</span>
+                    <strong>{{ league_stats.avg_cards }}</strong>
+                </article>
+                <article class="intel-card">
+                    <span>Rojas en partido</span>
+                    <strong>{{ league_stats.red_match_pct }}%</strong>
+                </article>
+                <article class="intel-card">
+                    <span>Visitante gana</span>
+                    <strong>{{ league_stats.away_win_pct }}%</strong>
+                </article>
+            </div>
+            <div class="intel-columns">
+                <ol class="intel-list">
+                    {% for tip in league_stats.recommendations %}
+                    <li>{{ tip }}</li>
+                    {% endfor %}
+                </ol>
+                <ol class="intel-ranking">
+                    {% for team in league_stats.top_table %}
+                    <li>
+                        <span>#{{ team.position }} {{ team.team }}</span>
+                        <strong>{{ team.points }} pts | DG {{ team.gd }}</strong>
+                    </li>
+                    {% empty %}
+                    <li>
+                        <span>Sin tabla disponible</span>
+                        <strong>-</strong>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </section>
+
+        <section class="panel best-date-panel">
+            <div class="best-date-head">
+                <h3>Mejores apuestas por fecha</h3>
+                <span>Ventana: {{ best_bets_snapshot.window_label }}</span>
+            </div>
+            {% if best_bets_snapshot.entries %}
+            <table class="best-date-table">
+                <thead>
+                    <tr>
+                        <th>Liga</th>
+                        <th>Partido</th>
+                        <th>Pick</th>
+                        <th>Prob.</th>
+                        <th>Múltiple</th>
+                        <th>Conf.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in best_bets_snapshot.entries %}
+                    <tr>
+                        <td>{{ item.league_name }}</td>
+                        <td>{{ item.home_team }} vs {{ item.away_team }}<br><span style="color:var(--muted);font-size:0.75rem">{{ item.kickoff }}</span></td>
+                        <td><a href="{{ item.dashboard_url }}" style="color:#cfeee0;text-decoration:none">{{ item.pick }}</a><br><span style="color:var(--muted);font-size:0.75rem">{{ item.market }}</span></td>
+                        <td>{{ item.probability|floatformat:2 }}%</td>
+                        <td>{{ item.multiple_combined_probability|floatformat:2 }}%</td>
+                        <td>
+                            <span class="best-date-pill {% if item.multiple_confidence == 'Alta' %}alta{% elif item.multiple_confidence == 'Media' %}media{% else %}baja{% endif %}">
+                                {{ item.multiple_confidence }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="support" style="margin:0">No hay encuentros pendientes en la ventana seleccionada.</p>
+            {% endif %}
+            <a class="best-date-link" href="{% url 'best_bets_by_date' %}">Ver página completa de mejores apuestas por fecha</a>
+        </section>
 
         <section class="content">
             <article class="panel selector">

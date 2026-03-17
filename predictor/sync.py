@@ -19,6 +19,15 @@ from actualizar_encuentros_premierleague import write_csv as premier_write_csv
 from actualizar_encuentros_seriea import download_page as seriea_download_page
 from actualizar_encuentros_seriea import extract_matches as seriea_extract_matches
 from actualizar_encuentros_seriea import write_csv as seriea_write_csv
+from actualizar_encuentros_primeiraliga import download_page as primeiraliga_download_page
+from actualizar_encuentros_primeiraliga import extract_matches as primeiraliga_extract_matches
+from actualizar_encuentros_primeiraliga import write_csv as primeiraliga_write_csv
+from actualizar_encuentros_proleague import download_page as proleague_download_page
+from actualizar_encuentros_proleague import extract_matches as proleague_extract_matches
+from actualizar_encuentros_proleague import write_csv as proleague_write_csv
+from actualizar_encuentros_eredivisie import download_page as eredivisie_download_page
+from actualizar_encuentros_eredivisie import extract_matches as eredivisie_extract_matches
+from actualizar_encuentros_eredivisie import write_csv as eredivisie_write_csv
 
 from .engine import (
     get_prediction_service_bundesliga,
@@ -26,6 +35,9 @@ from .engine import (
     get_prediction_service_premier,
     get_prediction_service_seriea,
     get_prediction_service_spain,
+    get_prediction_service_primeiraliga,
+    get_prediction_service_proleague,
+    get_prediction_service_eredivisie,
 )
 from .models import FixtureLinkCache
 
@@ -39,6 +51,9 @@ LEAGUE_UPDATERS: dict[str, Updater] = {
     "premier": (premier_download_page, premier_extract_matches, premier_write_csv),
     "seriea": (seriea_download_page, seriea_extract_matches, seriea_write_csv),
     "ligue1": (ligue1_download_page, ligue1_extract_matches, ligue1_write_csv),
+    "primeiraliga": (primeiraliga_download_page, primeiraliga_extract_matches, primeiraliga_write_csv),
+    "proleague": (proleague_download_page, proleague_extract_matches, proleague_write_csv),
+    "eredivisie": (eredivisie_download_page, eredivisie_extract_matches, eredivisie_write_csv),
 }
 
 
@@ -51,6 +66,12 @@ def clear_service_cache(liga: str) -> None:
         get_prediction_service_seriea.cache_clear()
     elif liga == "ligue1":
         get_prediction_service_ligue1.cache_clear()
+    elif liga == "primeiraliga":
+        get_prediction_service_primeiraliga.cache_clear()
+    elif liga == "proleague":
+        get_prediction_service_proleague.cache_clear()
+    elif liga == "eredivisie":
+        get_prediction_service_eredivisie.cache_clear()
     else:
         get_prediction_service_spain.cache_clear()
 
