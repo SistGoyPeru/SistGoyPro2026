@@ -1965,7 +1965,7 @@ def best_bets_totals_pdf(request):
 
 
 def best_bets_summary_pdf(request):
-	"""Generar PDF consolidado con portada y secciones (1X2, Doble Oportunidad, Totales y Múltiple)."""
+	"""PDF consolidado: 1X2 | Doble Oportunidad | Goles | Tarjetas | Corners | Multiple (encuentros con 2+ mercados)."""
 	entries: list[dict[str, object]] = []
 	window_fixtures, target_date = _get_pdf_target_fixtures(request)
 	if not window_fixtures or target_date is None:
@@ -1977,57 +1977,78 @@ def best_bets_summary_pdf(request):
 		except ValueError:
 			continue
 
+		markets = prediction.get("markets", {})
+
+		# 1X2
 		pick_1x2 = prediction.get("categorized_bets", {}).get("resultado_1x2", {})
 		prob_1x2 = float(pick_1x2.get("prob", 0.0))
+
+		# Doble oportunidad
 		pick_dc = prediction.get("categorized_bets", {}).get("doble_oportunidad", {})
 		prob_dc = float(pick_dc.get("prob", 0.0))
 
-		totals = prediction.get("markets", {}).get("totales", {})
-		o15 = float(totals.get("over_1_5", 0.0))
-		o25 = float(totals.get("over_2_5", 0.0))
-		u35 = float(totals.get("under_3_5", 0.0))
-		u45 = float(totals.get("under_4_5", 0.0))
-		totals_pick, totals_prob = max(
-			[("Over 1.5", o15), ("Over 2.5", o25), ("Under 3.5", u35), ("Under 4.5", u45)],
-			key=lambda item: item[1],
-		)
+		# Goles (Over/Under de goles totales)
+		totales = markets.get("totales", {}) if isinstance(markets.get("totales", {}), dict) else {}
+		goles_candidates = [
+			("Over 1.5", float(totales.get("over_1_5", 0.0))),
+			("Over 2.5", float(totales.get("over_2_5", 0.0))),
+			("Under 3.5", float(totales.get("under_3_5", 0.0))),
+			("Under 4.5", float(totales.get("under_4_5", 0.0))),
+		]
+		goles_pick, goles_prob = max(goles_candidates, key=lambda x: x[1])
 
-		multiple = prediction.get("categorized_bets", {}).get("multiple", {})
-		multiple_legs = list(multiple.get("legs", []))
-		no_cards_prob = _combined_without_cards_corners_probability(multiple_legs)
-		top2_prob = _combined_top_two_probability(multiple_legs)
-		general_prob = float(multiple.get("prob_combinada", 0.0))
-		multiple_pick, multiple_prob = max(
-			[("Múltiple sin tarjetas/corners", no_cards_prob), ("Múltiple top 2", top2_prob), ("Múltiple general", general_prob)],
-			key=lambda item: item[1],
-		)
+		# Tarjetas
+		cards = markets.get("tarjetas", {}) if isinstance(markets.get("tarjetas", {}), dict) else {}
+		yellow = cards.get("amarillas", {}) if isinstance(cards.get("amarillas", {}), dict) else {}
+		red_cards = cards.get("rojas", {}) if isinstance(cards.get("rojas", {}), dict) else {}
+		total_cards = cards.get("totales", {}) if isinstance(cards.get("totales", {}), dict) else {}
+		tarjetas_candidates = [
+			("Amarillas Over 3.5", float(yellow.get("over_3_5", 0.0))),
+			("Amarillas Under 3.5", float(yellow.get("under_3_5", 0.0))),
+			("Rojas Over 0.5", float(red_cards.get("over_0_5", 0.0))),
+			("Rojas Under 0.5", float(red_cards.get("under_0_5", 0.0))),
+			("Total Over 3.5", float(total_cards.get("over_3_5", 0.0))),
+			("Total Under 3.5", float(total_cards.get("under_3_5", 0.0))),
+			("Total Over 4.5", float(total_cards.get("over_4_5", 0.0))),
+			("Total Under 4.5", float(total_cards.get("under_4_5", 0.0))),
+		]
+		tarjetas_pick, tarjetas_prob = max(tarjetas_candidates, key=lambda x: x[1])
+
+		# Corners
+		corners_mkt = markets.get("corners_8_5", {}) if isinstance(markets.get("corners_8_5", {}), dict) else {}
+		corners_candidates = [
+			("Over 8.5", float(corners_mkt.get("over", 0.0))),
+			("Under 8.5", float(corners_mkt.get("under", 0.0))),
+		]
+		corners_pick, corners_prob = max(corners_candidates, key=lambda x: x[1])
 
 		has_any = any([
 			_meets_pdf_threshold(prob_1x2),
 			_meets_pdf_threshold(prob_dc),
-			_meets_pdf_threshold(totals_prob),
-			_meets_pdf_threshold(multiple_prob),
+			_meets_pdf_threshold(goles_prob),
+			_meets_pdf_threshold(tarjetas_prob),
+			_meets_pdf_threshold(corners_prob),
 		])
 		if not has_any:
 			continue
 
-		entries.append(
-			{
-				"sort_date": sort_date,
-				"date_label": str(fixture["fecha"]),
-				"league_name": service.league_name,
-				"kickoff": str(fixture["hora"]),
-				"match": f"{fixture['local']} vs {fixture['visitante']}",
-				"one_x_two_pick": str(pick_1x2.get("pick", "N/D")),
-				"one_x_two_prob": prob_1x2,
-				"dc_pick": str(pick_dc.get("pick", "N/D")),
-				"dc_prob": prob_dc,
-				"totals_pick": totals_pick,
-				"totals_prob": totals_prob,
-				"multiple_pick": multiple_pick,
-				"multiple_prob": multiple_prob,
-			}
-		)
+		entries.append({
+			"sort_date": sort_date,
+			"date_label": str(fixture["fecha"]),
+			"league_name": service.league_name,
+			"kickoff": str(fixture["hora"]),
+			"match": f"{fixture['local']} vs {fixture['visitante']}",
+			"one_x_two_pick": str(pick_1x2.get("pick", "N/D")),
+			"one_x_two_prob": prob_1x2,
+			"dc_pick": str(pick_dc.get("pick", "N/D")),
+			"dc_prob": prob_dc,
+			"goles_pick": goles_pick,
+			"goles_prob": goles_prob,
+			"tarjetas_pick": tarjetas_pick,
+			"tarjetas_prob": tarjetas_prob,
+			"corners_pick": corners_pick,
+			"corners_prob": corners_prob,
+		})
 
 	if not entries:
 		return HttpResponse(
@@ -2037,22 +2058,39 @@ def best_bets_summary_pdf(request):
 
 	entries = sorted(
 		entries,
-		key=lambda item: (
-			item["sort_date"],
-			-max(float(item["one_x_two_prob"]), float(item["dc_prob"]), float(item["totals_prob"]), float(item["multiple_prob"])),
-			item["kickoff"],
-		),
+		key=lambda item: (item["sort_date"], item["kickoff"]),
 	)
 
+	# Conteos para portada
 	window_label = target_date.strftime("%d/%m/%Y")
 	total_matches = len(entries)
-	one_x_two_count = sum(1 for row in entries if _meets_pdf_threshold(float(row["one_x_two_prob"])))
-	dc_count = sum(1 for row in entries if _meets_pdf_threshold(float(row["dc_prob"])))
-	totals_count = sum(1 for row in entries if _meets_pdf_threshold(float(row["totals_prob"])))
-	multiple_count = sum(1 for row in entries if _meets_pdf_threshold(float(row["multiple_prob"])))
+	one_x_two_count = sum(1 for r in entries if _meets_pdf_threshold(float(r["one_x_two_prob"])))
+	dc_count = sum(1 for r in entries if _meets_pdf_threshold(float(r["dc_prob"])))
+	goles_count = sum(1 for r in entries if _meets_pdf_threshold(float(r["goles_prob"])))
+	tarjetas_count = sum(1 for r in entries if _meets_pdf_threshold(float(r["tarjetas_prob"])))
+	corners_count = sum(1 for r in entries if _meets_pdf_threshold(float(r["corners_prob"])))
 
+	# Múltiple: encuentros con 2+ mercados que pasan el umbral
+	def _collect_valid_picks(row: dict) -> list[tuple[str, str, float]]:
+		picks = []
+		if _meets_pdf_threshold(float(row["one_x_two_prob"])):
+			picks.append(("1X2", str(row["one_x_two_pick"]), float(row["one_x_two_prob"])))
+		if _meets_pdf_threshold(float(row["dc_prob"])):
+			picks.append(("Doble Oport.", str(row["dc_pick"]), float(row["dc_prob"])))
+		if _meets_pdf_threshold(float(row["goles_prob"])):
+			picks.append(("Goles", str(row["goles_pick"]), float(row["goles_prob"])))
+		if _meets_pdf_threshold(float(row["tarjetas_prob"])):
+			picks.append(("Tarjetas", str(row["tarjetas_pick"]), float(row["tarjetas_prob"])))
+		if _meets_pdf_threshold(float(row["corners_prob"])):
+			picks.append(("Corners", str(row["corners_pick"]), float(row["corners_prob"])))
+		return picks
+
+	multiple_entries = [(row, _collect_valid_picks(row)) for row in entries if len(_collect_valid_picks(row)) >= 2]
+	multiple_count = len(multiple_entries)
+
+	# PDF setup
 	buffer = BytesIO()
-	doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=0.35*inch, leftMargin=0.35*inch, topMargin=0.5*inch, bottomMargin=0.5*inch)
+	doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=0.35 * inch, leftMargin=0.35 * inch, topMargin=0.5 * inch, bottomMargin=0.5 * inch)
 	styles = getSampleStyleSheet()
 	story = []
 
@@ -2061,22 +2099,26 @@ def best_bets_summary_pdf(request):
 	section_title = ParagraphStyle("SectionTitle", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=15, textColor=colors.HexColor("#145433"), spaceAfter=8)
 	header_style = ParagraphStyle("HeaderSummary", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=10, textColor=colors.white, spaceAfter=6, spaceBefore=8)
 	body_text = ParagraphStyle("BodyTextSummary", parent=styles["Normal"], fontName="Helvetica", fontSize=9, textColor=colors.HexColor("#21352b"), leading=12)
+	leg_style = ParagraphStyle("LegStyle", parent=styles["Normal"], fontName="Helvetica", fontSize=7, leading=10, textColor=colors.HexColor("#1a4a35"))
+	match_title_st = ParagraphStyle("MatchTitleSt", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=8, textColor=colors.HexColor("#0f3d28"), leading=11)
 
-	# Portada
+	# ── Portada ──────────────────────────────────────────────────────────────
 	story.append(Spacer(1, 1.2 * inch))
 	story.append(Paragraph("RESUMEN GENERAL DE REPORTES", cover_title))
-	story.append(Paragraph("Consolidado único: 1X2, Doble Oportunidad, Totales y Múltiple", cover_subtitle))
+	story.append(Paragraph("1X2  ·  Doble Oportunidad  ·  Goles  ·  Tarjetas  ·  Corners  ·  Múltiple", cover_subtitle))
 
 	cover_data = [
 		["Fecha de reporte", window_label],
 		["Filtro mínimo", f"{PDF_MIN_PROBABILITY:.0f}%"],
 		["Encuentros con al menos 1 mercado válido", str(total_matches)],
-		["Mercados 1X2 válidos", str(one_x_two_count)],
-		["Mercados Doble Oportunidad válidos", str(dc_count)],
-		["Mercados Totales válidos", str(totals_count)],
-		["Mercados Múltiple válidos", str(multiple_count)],
+		["Picks 1X2 válidos", str(one_x_two_count)],
+		["Picks Doble Oportunidad válidos", str(dc_count)],
+		["Picks Goles válidos", str(goles_count)],
+		["Picks Tarjetas válidos", str(tarjetas_count)],
+		["Picks Corners válidos", str(corners_count)],
+		["Encuentros con Apuesta Múltiple (2+ mercados)", str(multiple_count)],
 	]
-	cover_table = Table(cover_data, colWidths=[3.2 * inch, 4.3 * inch])
+	cover_table = Table(cover_data, colWidths=[3.8 * inch, 3.7 * inch])
 	cover_table.setStyle(TableStyle([
 		("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f3faf6")),
 		("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#a7d7c4")),
@@ -2092,55 +2134,19 @@ def best_bets_summary_pdf(request):
 	story.append(cover_table)
 	story.append(PageBreak())
 
-	# Resumen ejecutivo
-	story.append(Paragraph("Resumen ejecutivo", section_title))
-	story.append(Paragraph("Cada fila muestra el mejor mercado detectado por partido para una lectura rápida.", body_text))
-	story.append(Spacer(1, 0.08 * inch))
-
-	executive_rows = [["#", "Encuentro", "Liga", "Mejor mercado", "Prob."]]
-	for idx, row in enumerate(entries, 1):
-		best_market_name, best_market_prob = max(
-			[
-				("1X2", float(row["one_x_two_prob"])),
-				("Doble Oportunidad", float(row["dc_prob"])),
-				("Totales", float(row["totals_prob"])),
-				("Múltiple", float(row["multiple_prob"])),
-			],
-			key=lambda item: item[1],
-		)
-		executive_rows.append([
-			str(idx),
-			f"{row['match']} ({row['kickoff']})",
-			str(row["league_name"]),
-			best_market_name,
-			f"{best_market_prob:.2f}%".replace(".", ","),
-		])
-
-	exec_table = Table(executive_rows, colWidths=[0.35 * inch, 3.6 * inch, 1.6 * inch, 1.35 * inch, 0.9 * inch])
-	exec_table.setStyle(TableStyle([
-		("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8f5f0")),
-		("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f3d28")),
-		("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-		("FONTSIZE", (0, 0), (-1, -1), 7.5),
-		("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#a7d7c4")),
-		("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-		("LEFTPADDING", (0, 0), (-1, -1), 4),
-		("RIGHTPADDING", (0, 0), (-1, -1), 4),
-	]))
-	story.append(exec_table)
-
-	def _append_market_section(section_label: str, prob_key: str, pick_key: str) -> None:
+	# ── Helper secciones simples ──────────────────────────────────────────────
+	def _simple_section(section_label: str, prob_key: str, pick_key: str) -> None:
 		story.append(PageBreak())
 		story.append(Paragraph(section_label, section_title))
-		story.append(Paragraph(f"Se muestran solo selecciones con probabilidad mayor o igual a {PDF_MIN_PROBABILITY:.0f}%.", body_text))
+		story.append(Paragraph(f"Solo picks con probabilidad >= {PDF_MIN_PROBABILITY:.0f}%.", body_text))
 		story.append(Spacer(1, 0.08 * inch))
 
 		section_items = [row for row in entries if _meets_pdf_threshold(float(row[prob_key]))]
 		if not section_items:
-			story.append(Paragraph("No hay selecciones para esta sección con el filtro actual.", body_text))
+			story.append(Paragraph("No hay selecciones con el filtro actual.", body_text))
 			return
 
-		date_groups: dict[str, list[dict[str, object]]] = {}
+		date_groups: dict[str, list] = {}
 		for row in section_items:
 			date_groups.setdefault(str(row["date_label"]), []).append(row)
 
@@ -2155,10 +2161,10 @@ def best_bets_summary_pdf(request):
 			story.append(head)
 			story.append(Spacer(1, 0.06 * inch))
 
-			rows = [["#", "Encuentro", "Liga", "Pick", "Prob.", "Cuota justa"]]
-			for idx, row in enumerate(sorted(date_groups[date_label], key=lambda item: (-float(item[prob_key]), item["kickoff"])), 1):
+			tbl_rows = [["#", "Encuentro", "Liga", "Pick", "Prob.", "Cuota justa"]]
+			for idx, row in enumerate(sorted(date_groups[date_label], key=lambda r: r["kickoff"]), 1):
 				prob = float(row[prob_key])
-				rows.append([
+				tbl_rows.append([
 					str(idx),
 					f"{row['match']} ({row['kickoff']})",
 					str(row["league_name"]),
@@ -2167,7 +2173,7 @@ def best_bets_summary_pdf(request):
 					f"{_fair_odds(prob):.2f}".replace(".", ","),
 				])
 
-			table = Table(rows, colWidths=[0.35 * inch, 3.05 * inch, 1.45 * inch, 1.55 * inch, 0.7 * inch, 0.6 * inch])
+			table = Table(tbl_rows, colWidths=[0.35 * inch, 3.05 * inch, 1.45 * inch, 1.55 * inch, 0.7 * inch, 0.6 * inch])
 			table.setStyle(TableStyle([
 				("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8f5f0")),
 				("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f3d28")),
@@ -2181,10 +2187,93 @@ def best_bets_summary_pdf(request):
 			story.append(table)
 			story.append(Spacer(1, 0.1 * inch))
 
-	_append_market_section("Sección 1: Mercado 1X2", "one_x_two_prob", "one_x_two_pick")
-	_append_market_section("Sección 2: Doble Oportunidad", "dc_prob", "dc_pick")
-	_append_market_section("Sección 3: Totales", "totals_prob", "totals_pick")
-	_append_market_section("Sección 4: Múltiple", "multiple_prob", "multiple_pick")
+	_simple_section("Seccion 1: Mercado 1X2", "one_x_two_prob", "one_x_two_pick")
+	_simple_section("Seccion 2: Doble Oportunidad", "dc_prob", "dc_pick")
+	_simple_section("Seccion 3: Goles (Over/Under)", "goles_prob", "goles_pick")
+	_simple_section("Seccion 4: Tarjetas", "tarjetas_prob", "tarjetas_pick")
+	_simple_section("Seccion 5: Corners", "corners_prob", "corners_pick")
+
+	# ── Sección 6: Apuesta Múltiple ───────────────────────────────────────────
+	story.append(PageBreak())
+	story.append(Paragraph("Seccion 6: Apuesta Multiple", section_title))
+	story.append(Paragraph(
+		f"Encuentros con 2 o mas mercados con probabilidad >= {PDF_MIN_PROBABILITY:.0f}%. "
+		"Todos los picks se combinan en una sola apuesta.",
+		body_text,
+	))
+	story.append(Spacer(1, 0.08 * inch))
+
+	if not multiple_entries:
+		story.append(Paragraph("No hay encuentros con 2 o mas mercados validos.", body_text))
+	else:
+		multi_date_groups: dict[str, list] = {}
+		for row, picks in multiple_entries:
+			multi_date_groups.setdefault(str(row["date_label"]), []).append((row, picks))
+
+		for date_label in sorted(multi_date_groups.keys()):
+			head = Table([[Paragraph(f"FECHA: {date_label}", header_style)]], colWidths=[7.7 * inch])
+			head.setStyle(TableStyle([
+				("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#145433")),
+				("LEFTPADDING", (0, 0), (-1, -1), 10),
+				("TOPPADDING", (0, 0), (-1, -1), 8),
+				("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+			]))
+			story.append(head)
+			story.append(Spacer(1, 0.06 * inch))
+
+			for idx, (row, picks) in enumerate(
+				sorted(multi_date_groups[date_label], key=lambda t: t[0]["kickoff"]), 1
+			):
+				combined_prob = 1.0
+				for _, _, p in picks:
+					combined_prob *= p / 100.0
+				combined_prob_pct = round(combined_prob * 100, 2)
+
+				header_row = Table(
+					[[
+						Paragraph(f"<b>#{idx} {row['match']}</b><br/><font size=7>{row['league_name']} - {row['kickoff']}</font>", match_title_st),
+						Paragraph(f"<b>{len(picks)} picks</b><br/>Prob. combinada: <b>{combined_prob_pct:.2f}%</b>", body_text),
+						Paragraph(f"Cuota comb.:<br/><b>{_fair_odds(combined_prob_pct):.2f}</b>", body_text),
+					]],
+					colWidths=[3.4 * inch, 2.7 * inch, 1.6 * inch],
+				)
+				header_row.setStyle(TableStyle([
+					("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#e0f2eb")),
+					("BOX", (0, 0), (-1, -1), 1.5, colors.HexColor("#145433")),
+					("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+					("LEFTPADDING", (0, 0), (-1, -1), 6),
+					("TOPPADDING", (0, 0), (-1, -1), 6),
+					("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+				]))
+				story.append(header_row)
+
+				ph_st = ParagraphStyle("PH", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=7, textColor=colors.HexColor("#0f3d28"))
+				picks_data = [[
+					Paragraph("MERCADO", ph_st),
+					Paragraph("PICK", ph_st),
+					Paragraph("PROB.", ph_st),
+					Paragraph("CUOTA JUSTA", ph_st),
+				]]
+				for mkt_name, mkt_pick, mkt_prob in sorted(picks, key=lambda x: -x[2]):
+					picks_data.append([
+						Paragraph(mkt_name, leg_style),
+						Paragraph(mkt_pick, leg_style),
+						Paragraph(f"{mkt_prob:.2f}%".replace(".", ","), leg_style),
+						Paragraph(f"{_fair_odds(mkt_prob):.2f}".replace(".", ","), leg_style),
+					])
+				picks_table = Table(picks_data, colWidths=[1.5 * inch, 3.2 * inch, 1.0 * inch, 2.0 * inch])
+				picks_table.setStyle(TableStyle([
+					("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#c8e8d4")),
+					("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f5fcf9")),
+					("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#a7d7c4")),
+					("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#c8e8dc")),
+					("LEFTPADDING", (0, 0), (-1, -1), 6),
+					("TOPPADDING", (0, 0), (-1, -1), 4),
+					("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+					("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+				]))
+				story.append(picks_table)
+				story.append(Spacer(1, 0.12 * inch))
 
 	doc.build(story)
 	buffer.seek(0)
