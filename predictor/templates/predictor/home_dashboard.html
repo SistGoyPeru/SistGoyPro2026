@@ -638,11 +638,12 @@
             <div class="report-downloads">
                 <h4>📊 Descargar reportes por mercado</h4>
                 <div class="report-links">
+                    <a class="report-link" href="{% url 'best_bets_summary_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 Resumen general</a>
                     <a class="report-link" href="{% url 'best_bets_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 General</a>
                     <a class="report-link" href="{% url 'best_bets_1x2_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 1X2</a>
                     <a class="report-link" href="{% url 'best_bets_double_chance_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 Doble oportunidad</a>
                     <a class="report-link" href="{% url 'best_bets_totals_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 Totales</a>
-                    <a class="report-link" href="{% url 'refresh_all_leagues' %}?run=1" target="_blank" rel="noopener noreferrer">🔄 Actualizar toda la data</a>
+                    <a class="report-link" href="{% url 'refresh_all_leagues' %}?run=1">🔄 Actualizar toda la data</a>
                 </div>
             </div>
         </section>
@@ -669,7 +670,7 @@
                             <span class="entity-inline">{% if item.away_team_logo %}<img class="entity-logo" src="{{ item.away_team_logo }}" alt="{{ item.away_team }}">{% endif %}{{ item.away_team }}</span>
                         </div>
                     </div>
-                    <div class="agenda-pick"><a href="{{ item.dashboard_url }}" target="_blank" rel="noopener noreferrer">Abrir pronóstico</a></div>
+                    <div class="agenda-pick"><a href="{{ item.dashboard_url }}">Abrir pronóstico</a></div>
                 </article>
                 {% empty %}
                 <article class="agenda-item">
@@ -691,7 +692,7 @@
             </div>
             <div class="title-row" style="margin-bottom:0;">
                 <span class="meta">Usa los enlaces de Agenda del día para abrir cada encuentro en una nueva pestaña.</span>
-                <a class="btn gold" href="{% url 'match_prediction_page' %}" target="_blank" rel="noopener noreferrer">Ir a pronósticos</a>
+                <a class="btn gold" href="{% url 'match_prediction_page' %}">Ir a pronósticos</a>
             </div>
         </section>
 
