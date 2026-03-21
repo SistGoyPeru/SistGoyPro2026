@@ -1999,14 +1999,8 @@ def best_bets_summary_pdf(request):
 
 		# Tarjetas
 		cards = markets.get("tarjetas", {}) if isinstance(markets.get("tarjetas", {}), dict) else {}
-		yellow = cards.get("amarillas", {}) if isinstance(cards.get("amarillas", {}), dict) else {}
-		red_cards = cards.get("rojas", {}) if isinstance(cards.get("rojas", {}), dict) else {}
 		total_cards = cards.get("totales", {}) if isinstance(cards.get("totales", {}), dict) else {}
 		tarjetas_candidates = [
-			("Amarillas Over 3.5", float(yellow.get("over_3_5", 0.0))),
-			("Amarillas Under 3.5", float(yellow.get("under_3_5", 0.0))),
-			("Rojas Over 0.5", float(red_cards.get("over_0_5", 0.0))),
-			("Rojas Under 0.5", float(red_cards.get("under_0_5", 0.0))),
 			("Total Over 3.5", float(total_cards.get("over_3_5", 0.0))),
 			("Total Under 3.5", float(total_cards.get("under_3_5", 0.0))),
 			("Total Over 4.5", float(total_cards.get("over_4_5", 0.0))),
@@ -2136,15 +2130,14 @@ def best_bets_summary_pdf(request):
 
 	# ── Helper secciones simples ──────────────────────────────────────────────
 	def _simple_section(section_label: str, prob_key: str, pick_key: str) -> None:
+		section_items = [row for row in entries if _meets_pdf_threshold(float(row[prob_key]))]
+		if not section_items:
+			return
+
 		story.append(PageBreak())
 		story.append(Paragraph(section_label, section_title))
 		story.append(Paragraph(f"Solo picks con probabilidad >= {PDF_MIN_PROBABILITY:.0f}%.", body_text))
 		story.append(Spacer(1, 0.08 * inch))
-
-		section_items = [row for row in entries if _meets_pdf_threshold(float(row[prob_key]))]
-		if not section_items:
-			story.append(Paragraph("No hay selecciones con el filtro actual.", body_text))
-			return
 
 		date_groups: dict[str, list] = {}
 		for row in section_items:
@@ -2194,18 +2187,7 @@ def best_bets_summary_pdf(request):
 	_simple_section("Seccion 5: Corners", "corners_prob", "corners_pick")
 
 	# ── Sección 6: Apuesta Múltiple ───────────────────────────────────────────
-	story.append(PageBreak())
-	story.append(Paragraph("Seccion 6: Apuesta Multiple", section_title))
-	story.append(Paragraph(
-		f"Encuentros con 2 o mas mercados con probabilidad >= {PDF_MIN_PROBABILITY:.0f}%. "
-		"Todos los picks se combinan en una sola apuesta.",
-		body_text,
-	))
-	story.append(Spacer(1, 0.08 * inch))
-
-	if not multiple_entries:
-		story.append(Paragraph("No hay encuentros con 2 o mas mercados validos.", body_text))
-	else:
+	if multiple_entries:
 		multi_date_groups: dict[str, list] = {}
 		for row, picks in multiple_entries:
 			multi_date_groups.setdefault(str(row["date_label"]), []).append((row, picks))
@@ -2221,8 +2203,14 @@ def best_bets_summary_pdf(request):
 			story.append(head)
 			story.append(Spacer(1, 0.06 * inch))
 
+			def _comb_prob(picks):
+				r = 1.0
+				for _, _, p in picks:
+					r *= p / 100.0
+				return r
+
 			for idx, (row, picks) in enumerate(
-				sorted(multi_date_groups[date_label], key=lambda t: t[0]["kickoff"]), 1
+				sorted(multi_date_groups[date_label], key=lambda t: -_comb_prob(t[1])), 1
 			):
 				combined_prob = 1.0
 				for _, _, p in picks:
