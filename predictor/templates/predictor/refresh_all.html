@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actualizar datos – SistGoy PRO</title>
+    <link rel="icon" type="image/jpeg" href="{% static 'predictor/brand/logo.jpg' %}">
+    <style>
+        :root {
+            --bg-1:#073320; --bg-2:#0e4e33; --bg-3:#092516;
+            --panel:rgba(8,33,22,0.9); --line:rgba(186,224,199,0.18);
+            --text:#edf7f0; --muted:#a7c7b7;
+            --ok:#6ce3a3; --warn:#f7bf68; --bad:#f28b5a;
+        }
+        *{box-sizing:border-box;}
+        body{
+            margin:0; font-family:"Segoe UI",sans-serif;
+            color:var(--text);
+            background:linear-gradient(168deg,var(--bg-1),var(--bg-2) 50%,var(--bg-3));
+            min-height:100vh; display:flex; align-items:center; justify-content:center;
+        }
+        .card{
+            width:min(640px,95%); background:var(--panel);
+            border:1px solid var(--line); border-radius:16px; padding:28px 24px;
+        }
+        h1{
+            margin:0 0 4px; font-size:1.4rem; letter-spacing:0.04em; text-transform:uppercase;
+            color:#f6cf55;
+        }
+        p.sub{ margin:0 0 20px; color:var(--muted); font-size:0.9rem; }
+        .result-row{
+            display:flex; align-items:flex-start; gap:10px;
+            border:1px solid var(--line); border-radius:9px;
+            padding:9px 12px; margin-bottom:7px; background:rgba(255,255,255,0.03);
+        }
+        .result-row .icon{ font-size:1.2rem; flex:0 0 auto; margin-top:1px; }
+        .result-row .step{ font-weight:700; font-size:0.9rem; }
+        .result-row .detail{ font-size:0.78rem; color:var(--muted); margin-top:2px; white-space:pre-wrap; word-break:break-all; }
+        .result-row.ok{ border-color:rgba(108,227,163,0.3); }
+        .result-row.fail{ border-color:rgba(242,139,90,0.35); }
+        .summary{
+            margin-top:14px; padding:10px 14px;
+            border-radius:10px; font-weight:700; font-size:0.95rem;
+            background:rgba(0,0,0,0.18); border:1px solid var(--line);
+        }
+        .btn-back{
+            display:inline-block; margin-top:18px;
+            background:rgba(1,109,72,0.55); border:1px solid rgba(108,227,163,0.3);
+            border-radius:9px; padding:9px 20px; text-decoration:none;
+            color:#d3f9e8; font-weight:700; font-size:0.88rem; letter-spacing:0.04em;
+            text-transform:uppercase;
+        }
+        .btn-back:hover{ background:rgba(1,109,72,0.8); }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🔄 Actualización de datos</h1>
+    <p class="sub">Panel central para actualizar CSV históricos y enlaces de encuentros en todas las ligas.</p>
+
+    {% if not ran %}
+    <div class="summary" style="margin-top:0;">
+        Haz clic en el enlace para ejecutar la actualización completa.
+    </div>
+    <a class="btn-back" href="?run=1">Ejecutar actualización ahora</a>
+    <a class="btn-back" href="{% url 'dashboard' %}" style="margin-left:8px;">Volver al dashboard</a>
+    {% else %}
+
+    {% for r in results %}
+    <div class="result-row {% if r.ok %}ok{% else %}fail{% endif %}">
+        <div class="icon">{% if r.ok %}✅{% else %}⚠️{% endif %}</div>
+        <div>
+            <div class="step">{{ r.step }}</div>
+            {% if r.detail %}<div class="detail">{{ r.detail }}</div>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="summary">
+        {% if ok_count == total %}
+            ✅ Todo actualizado correctamente ({{ ok_count }}/{{ total }} pasos).
+        {% else %}
+            ⚠️ {{ ok_count }} de {{ total }} pasos completados sin error.
+        {% endif %}
+    </div>
+
+    <a class="btn-back" href="?run=1">Reintentar actualización</a>
+    <a class="btn-back" href="{% url 'dashboard' %}">← Volver al dashboard</a>
+    {% endif %}
+</div>
+</body>
+</html>

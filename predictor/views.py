@@ -2,9 +2,10 @@ from datetime import datetime, timedelta
 from io import BytesIO
 import re
 from collections import defaultdict
+from urllib.parse import urlencode
 
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -166,6 +167,13 @@ def _fair_odds(probability_pct: float) -> float:
 	return round(100.0 / probability_pct, 2)
 
 
+def _safe_float(value: object, default: float = 0.0) -> float:
+	try:
+		return float(value)
+	except (TypeError, ValueError):
+		return default
+
+
 def _parse_decimal_odd(value: str | None) -> float | None:
 	if value is None:
 		return None
@@ -179,6 +187,18 @@ def _parse_decimal_odd(value: str | None) -> float | None:
 	if odd <= 1.0:
 		return None
 	return odd
+
+
+def _prediction_url(liga: str, match_key: object, home_date: str | None = None, predict: bool = True) -> str:
+	params = {
+		"liga": str(liga),
+		"match_key": str(match_key or ""),
+	}
+	if home_date:
+		params["home_date"] = str(home_date)
+	if predict:
+		params["predict"] = "1"
+	return f"/pronostico/?{urlencode(params)}"
 
 
 def _value_signal(probability_pct: float, offered_odd: float | None) -> dict[str, object]:
@@ -700,7 +720,12 @@ def _build_multileague_home(selected_date_raw: str | None) -> dict[str, object]:
 				"confidence": str(recommended.get("confidence", "Baja")),
 				"multiple_confidence": str(multiple.get("confidence", "Baja")),
 				"multiple_combined_probability": float(multiple.get("prob_combinada", 0.0)),
-				"dashboard_url": f"/?liga={liga_key}&match_key={fixture.get('match_key', '')}",
+				"dashboard_url": _prediction_url(
+					liga=liga_key,
+					match_key=fixture.get("match_key", ""),
+					home_date=selected_date.strftime("%Y-%m-%d"),
+					predict=True,
+				),
 			}
 		)
 
@@ -1050,6 +1075,62 @@ def match_prediction_page(request):
 	return render(request, "predictor/match_prediction.html", context)
 
 
+def refresh_all_leagues(request):
+	"""Actualiza CSVs históricos, CSV de encuentros y caché de enlaces para todas las ligas."""
+	import subprocess
+	import sys
+	from pathlib import Path
+
+	if request.method not in ("GET", "POST"):
+		from django.http import HttpResponseNotAllowed
+		return HttpResponseNotAllowed(["GET", "POST"])
+
+	run_requested = request.method == "POST" or request.GET.get("run") == "1"
+	if not run_requested:
+		return render(
+			request,
+			"predictor/refresh_all.html",
+			{"results": [], "ok": False, "ok_count": 0, "total": 0, "ran": False},
+		)
+
+	base_dir = Path(__file__).resolve().parent.parent
+	results: list[dict[str, object]] = []
+
+	# ── 1. CSVs históricos (football-data.co.uk) ────────────────────────
+	csv_script = base_dir / "actualizar_csv.py"
+	try:
+		proc = subprocess.run(
+			[sys.executable, str(csv_script)],
+			cwd=str(base_dir),
+			capture_output=True,
+			text=True,
+			timeout=180,
+		)
+		ok = proc.returncode == 0
+		results.append({"step": "CSV histórico (todas las ligas)", "ok": ok, "detail": (proc.stdout + proc.stderr).strip()[-400:]})
+	except Exception as exc:
+		results.append({"step": "CSV histórico (todas las ligas)", "ok": False, "detail": str(exc)})
+
+	# ── 2. Encuentros + caché de enlaces para cada liga ────────────────
+	for liga_key in LEAGUE_SERVICE_FACTORIES:
+		try:
+			from .sync import refresh_fixture_links
+			n = refresh_fixture_links(liga_key)
+			results.append({"step": f"Encuentros & enlaces: {LEAGUE_NAMES.get(liga_key, liga_key)}", "ok": True, "detail": f"{n} encuentros actualizados"})
+		except Exception as exc:
+			results.append({"step": f"Encuentros & enlaces: {LEAGUE_NAMES.get(liga_key, liga_key)}", "ok": False, "detail": str(exc)[:300]})
+
+	ok_count = sum(1 for r in results if r["ok"])
+	total = len(results)
+	payload = {"ok": ok_count == total, "results": results, "ok_count": ok_count, "total": total, "ran": True}
+
+	accept_header = str(request.headers.get("Accept", ""))
+	if request.method == "POST" and "application/json" in accept_header:
+		return JsonResponse(payload)
+
+	return render(request, "predictor/refresh_all.html", payload)
+
+
 def best_bets_by_date(request):
 	best_entries: list[dict[str, object]] = []
 	refresh_log: list[str] = []
@@ -1143,7 +1224,12 @@ def best_bets_by_date(request):
 			"multiple_no_cards_corners_probability_text": f"{no_cards_corners_probability:.2f}".replace(".", ","),
 			"multiple_no_cards_corners_fair_odds": no_cards_corners_fair_odds,
 			"multiple_no_cards_corners_fair_odds_text": f"{no_cards_corners_fair_odds:.2f}".replace(".", ","),
-			"dashboard_url": f"/?liga={liga}&match_key={fixture['match_key']}",
+			"dashboard_url": _prediction_url(
+				liga=liga,
+				match_key=fixture["match_key"],
+				home_date=sort_date.strftime("%Y-%m-%d"),
+				predict=True,
+			),
 		}
 		best_entries.append(entry)
 

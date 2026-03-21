@@ -4,21 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pronóstico completo | {{ league_name }}</title>
+    <title>Pronóstico | {{ selected_fixture.local|default:league_name }} vs {{ selected_fixture.visitante|default:'' }}</title>
     <link rel="icon" type="image/jpeg" href="{% static 'predictor/brand/logo.jpg' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-1: #072f20;
-            --bg-2: #0d4a31;
-            --bg-3: #091f15;
-            --panel: rgba(9, 34, 23, 0.9);
-            --line: rgba(188, 225, 200, 0.18);
+            --bg-1: #062c1e;
+            --bg-2: #0c4530;
+            --bg-3: #081c11;
+            --panel: rgba(8, 32, 21, 0.92);
+            --panel-soft: rgba(12, 43, 28, 0.80);
+            --line: rgba(186, 225, 199, 0.18);
             --text: #edf8f1;
             --muted: #a7c7b7;
             --accent: #f6cf55;
+            --ok: #6ce3a3;
+            --hi: #ffe57b;
         }
         * { box-sizing: border-box; }
         body {
@@ -26,108 +29,254 @@
             font-family: "Source Sans 3", "Segoe UI", sans-serif;
             color: var(--text);
             background:
-                radial-gradient(circle at 16% 8%, rgba(246, 207, 85, 0.14), transparent 28%),
-                radial-gradient(circle at 84% 10%, rgba(108, 227, 163, 0.13), transparent 24%),
-                linear-gradient(170deg, var(--bg-1), var(--bg-2) 52%, var(--bg-3));
+                radial-gradient(circle at 14% 7%, rgba(246,207,85,.15), transparent 28%),
+                radial-gradient(circle at 85% 11%, rgba(108,227,163,.13), transparent 24%),
+                linear-gradient(168deg, var(--bg-1), var(--bg-2) 52%, var(--bg-3));
+            min-height: 100vh;
         }
-        .wrap { width: min(1200px, 100%); margin: 0 auto; padding: 14px; }
-        .top, .panel { border: 1px solid var(--line); border-radius: 14px; }
+        .wrap { width: min(1100px, 100%); margin: 0 auto; padding: 14px; }
+
+        /* ── NAV ─────────────────────────────────────────────── */
         .top {
             background: linear-gradient(90deg, #016d48, #0b8d5b);
-            padding: 10px 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
+            border: 1px solid rgba(255,255,255,.18);
+            border-radius: 14px;
+            padding: 10px 14px;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
             margin-bottom: 14px;
         }
         .brand { display: flex; align-items: center; gap: 10px; }
         .brand img { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; }
-        .brand h1 { margin: 0; font-family: "Barlow Condensed", sans-serif; color: #ffe57b; letter-spacing: 0.05em; text-transform: uppercase; }
-        .btn { text-decoration: none; color: #ecf8f1; border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; padding: 8px 10px; font-weight: 700; font-size: 0.8rem; background: rgba(0,0,0,0.16); }
-        .panel { background: var(--panel); padding: 14px; margin-bottom: 14px; }
-        .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-        .head h2 { margin: 0; font-family: "Barlow Condensed", sans-serif; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
-        .meta { color: var(--muted); font-size: 0.85rem; }
-        .entity-inline { display: inline-flex; align-items: center; gap: 8px; }
-        .entity-logo { width: 20px; height: 20px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,0.08); padding: 2px; }
-        .row { margin: 8px 0 0; }
-        .error { color: #ffd3d3; }
-        table { width: 100%; border-collapse: collapse; border: 1px solid rgba(255,255,255,0.09); }
-        th, td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; font-size: 0.84rem; }
-        th { background: rgba(255,255,255,0.05); color: #cfe6d9; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; }
-        td.value { text-align: right; color: var(--accent); font-weight: 700; }
-        .selector { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+        .brand h1 { margin: 0; font-family: "Barlow Condensed", sans-serif; color: #ffe57b; font-size: 1.2rem; text-transform: uppercase; letter-spacing: .05em; }
+        .btn { text-decoration: none; color: #ecf8f1; border: 1px solid rgba(255,255,255,.22); border-radius: 9px; padding: 7px 12px; font-weight: 700; font-size: .8rem; background: rgba(0,0,0,.18); letter-spacing: .04em; white-space: nowrap; }
+
+        /* ── HERO MATCH CARD ─────────────────────────────────── */
+        .match-hero {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 18px 16px 14px;
+            margin-bottom: 12px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 14px;
+        }
+        .team-col { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+        .team-col.away { }
+        .team-logo-big { width: 56px; height: 56px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,.06); padding: 5px; }
+        .team-name { font-family: "Barlow Condensed", sans-serif; font-size: 1.35rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; line-height: 1.1; }
+        .vs-col { text-align: center; }
+        .vs-badge { font-family: "Barlow Condensed", sans-serif; font-size: 2rem; font-weight: 800; color: var(--accent); letter-spacing: .06em; display: block; }
+        .match-meta { color: var(--muted); font-size: .8rem; margin-top: 2px; }
+        .league-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(246,207,85,.12); border: 1px solid rgba(246,207,85,.3);
+            border-radius: 999px; padding: 3px 10px;
+            font-size: .75rem; font-weight: 700; color: var(--accent);
+            text-transform: uppercase; letter-spacing: .04em;
+            margin-bottom: 10px;
+        }
+        .league-tag img { width: 16px; height: 16px; object-fit: contain; border-radius: 50%; }
+
+        /* ── 1X2 BIG PROBS ───────────────────────────────────── */
+        .proba-strip {
+            background: var(--panel-soft);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .proba-cell {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 14px 8px; gap: 2px;
+            border-right: 1px solid var(--line);
+        }
+        .proba-cell:last-child { border-right: none; }
+        .proba-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+        .proba-pct { font-family: "Barlow Condensed", sans-serif; font-size: 2.2rem; font-weight: 800; color: #fff; line-height: 1; }
+        .proba-odd { font-size: .8rem; color: var(--accent); font-weight: 700; }
+        .proba-cell.top-pick .proba-pct { color: var(--accent); }
+        .proba-cell.top-pick { background: rgba(246,207,85,.07); }
+
+        /* ── RECOMMENDATION CARD ─────────────────────────────── */
+        .rec-card {
+            background: linear-gradient(135deg, rgba(108,227,163,.12), rgba(108,227,163,.05));
+            border: 1px solid rgba(108,227,163,.35);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+        }
+        .rec-card .rec-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ok); font-weight: 700; }
+        .rec-card .rec-pick { font-family: "Barlow Condensed", sans-serif; font-size: 1.4rem; font-weight: 800; color: #fff; margin-top: 2px; }
+        .rec-card .rec-prob { font-size: .92rem; color: var(--ok); font-weight: 700; }
+        .conf-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 999px; padding: 4px 12px;
+            font-weight: 800; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
+            border: 1px solid transparent;
+        }
+        .conf-alta { background: rgba(82,216,142,.18); border-color: rgba(82,216,142,.5); color: #aef4ca; }
+        .conf-media { background: rgba(246,207,85,.16); border-color: rgba(246,207,85,.5); color: #ffe7a2; }
+        .conf-baja  { background: rgba(200,200,200,.12); border-color: rgba(200,200,200,.3); color: #c8cdd0; }
+
+        /* ── SCORE PRO ───────────────────────────────────────── */
+        .score-strip {
+            text-align: center;
+            background: var(--panel-soft);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+        }
+        .score-strip .score-num { font-family: "Barlow Condensed", sans-serif; font-size: 2.2rem; font-weight: 800; color: var(--hi); letter-spacing: .1em; }
+        .score-strip .score-sub { color: var(--muted); font-size: .78rem; margin-top: 2px; }
+
+        /* ── MARKETS TABLE ───────────────────────────────────── */
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .section-title {
+            margin: 0 0 10px;
+            font-family: "Barlow Condensed", sans-serif;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--accent);
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.07); font-size: .84rem; text-align: left; }
+        th { background: rgba(255,255,255,.05); color: #cfe6d9; text-transform: uppercase; font-size: .7rem; letter-spacing: .05em; }
+        tr:last-child td { border-bottom: none; }
+        td.r { text-align: right; font-weight: 700; color: var(--accent); }
+        .prob-bar { display: flex; align-items: center; gap: 8px; }
+        .bar-bg { flex: 1; height: 5px; background: rgba(255,255,255,.1); border-radius: 3px; overflow: hidden; min-width: 60px; }
+        .bar-fill { height: 100%; background: var(--ok); border-radius: 3px; transition: width .3s; }
+        .bar-fill.mid { background: var(--accent); }
+        .bar-fill.lo  { background: rgba(200,100,100,.6); }
+
+        /* ── SELECTOR PANEL ──────────────────────────────────── */
+        .selector-wrap { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
         select, button { border-radius: 10px; border: 1px solid var(--line); padding: 10px; font: inherit; }
-        select { background: rgba(7, 29, 19, 0.82); color: #ebf7f1; }
-        button { background: linear-gradient(135deg, #ffd876, #f6cf55); color: #173728; font-weight: 700; border: none; text-transform: uppercase; }
-        @media (max-width: 760px) { .selector { grid-template-columns: 1fr; } }
+        select { background: rgba(7,29,19,.85); color: #ebf7f1; width: 100%; }
+        button { background: linear-gradient(135deg, #ffd876, #f6cf55); color: #173728; font-weight: 700; border: none; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; white-space: nowrap; }
+        .error-msg { color: #ffd3d3; font-size: .88rem; margin: 8px 0 0; }
+
+        @media (max-width: 700px) {
+            .match-hero { grid-template-columns: 1fr; }
+            .proba-strip { grid-template-columns: repeat(3, 1fr); }
+            .selector-wrap { grid-template-columns: 1fr; }
+            .team-name { font-size: 1.1rem; }
+        }
     </style>
 </head>
 <body>
 <div class="wrap">
+
+    <!-- NAV -->
     <header class="top">
         <div class="brand">
             <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoy PRO">
             <h1>Pronóstico completo</h1>
         </div>
-        <a class="btn" href="/?liga={{ liga }}{% if home_date %}&home_date={{ home_date }}{% endif %}">Volver al dashboard</a>
+        <a class="btn" href="/?liga={{ liga }}{% if home_date %}&home_date={{ home_date }}{% endif %}">← Dashboard</a>
     </header>
 
-    <section class="panel">
-        <div class="head">
-            <h2>{{ league_name }}</h2>
-            {% if selected_fixture %}
-            <div class="meta">
-                <span class="entity-inline">{% if selected_fixture.local_logo %}<img class="entity-logo" src="{{ selected_fixture.local_logo }}" alt="{{ selected_fixture.local }}">{% endif %}{{ selected_fixture.local }}</span>
-                vs
-                <span class="entity-inline">{% if selected_fixture.visitante_logo %}<img class="entity-logo" src="{{ selected_fixture.visitante_logo }}" alt="{{ selected_fixture.visitante }}">{% endif %}{{ selected_fixture.visitante }}</span>
-                | {{ selected_fixture.fecha }} {{ selected_fixture.hora }}
-            </div>
+    {% if prediction and full_prediction_rows %}
+
+    <!-- LEAGUE TAG -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span class="league-tag">
+            {% if league_logo_url %}<img src="{{ league_logo_url }}" alt="{{ league_name }}">{% endif %}
+            {{ league_name }}
+        </span>
+        {% if selected_fixture %}
+        <span style="color:var(--muted);font-size:.82rem;">{{ selected_fixture.fecha }} · {{ selected_fixture.hora }}</span>
+        {% endif %}
+    </div>
+
+    <!-- HERO: EQUIPOS -->
+    <div class="match-hero">
+        <div class="team-col">
+            {% if selected_fixture.local_logo %}<img class="team-logo-big" src="{{ selected_fixture.local_logo }}" alt="{{ selected_fixture.local }}">{% endif %}
+            <span class="team-name">{{ selected_fixture.local }}</span>
+        </div>
+        <div class="vs-col">
+            <span class="vs-badge">VS</span>
+            {% if prediction.score_projection.best_score %}
+            <div class="match-meta">Est. {{ prediction.score_projection.best_score }}</div>
             {% endif %}
         </div>
-
-        <form method="get" class="selector">
-            <input type="hidden" name="liga" value="{{ liga }}">
-            {% if home_date %}<input type="hidden" name="home_date" value="{{ home_date }}">{% endif %}
-            <input type="hidden" name="predict" value="1">
-            <select name="match_key" required>
-                <option value="">Selecciona encuentro...</option>
-                {% for f in fixtures %}
-                <option value="{{ f.match_key }}" {% if selected_match_key == f.match_key %}selected{% endif %}>{{ f.fecha }} {{ f.hora }} | {{ f.local }} vs {{ f.visitante }}</option>
-                {% endfor %}
-                {% if not fixtures and selected_match_key %}
-                <option value="{{ selected_match_key }}" selected>{{ selected_match_key }}</option>
-                {% endif %}
-            </select>
-            <button type="submit">Ver pronóstico</button>
-        </form>
-
-        {% if error_message %}
-        <p class="row error">{{ error_message }}</p>
-        {% endif %}
-        {% if selected_match_key and not predict_enabled %}
-        <p class="row">
-            <a class="btn" href="?liga={{ liga }}&match_key={{ selected_match_key|urlencode }}{% if home_date %}&home_date={{ home_date }}{% endif %}&predict=1">Calcular pronóstico completo</a>
-        </p>
-        {% endif %}
-    </section>
-
-    <section class="panel">
-        <div class="head">
-            <h2>Todos los mercados</h2>
-            {% if prediction %}
-            <div class="meta">Marcador estimado: {{ prediction.score_projection.best_score }} | Goles esperados: {{ prediction.score_projection.expected_home }} - {{ prediction.score_projection.expected_away }}</div>
-            {% endif %}
+        <div class="team-col away">
+            {% if selected_fixture.visitante_logo %}<img class="team-logo-big" src="{{ selected_fixture.visitante_logo }}" alt="{{ selected_fixture.visitante }}">{% endif %}
+            <span class="team-name">{{ selected_fixture.visitante }}</span>
         </div>
-        {% if prediction and full_prediction_rows %}
+    </div>
+
+    <!-- PROBA 1X2 GRANDE -->
+    {% with probs=prediction.probabilities %}
+    {% if probs %}
+    <div class="proba-strip">
+        <div class="proba-cell {% if probs.local > probs.empate and probs.local > probs.visitante %}top-pick{% endif %}">
+            <span class="proba-label">Local</span>
+            <span class="proba-pct">{{ probs.local|floatformat:0 }}%</span>
+            <span class="proba-odd">@{{ probs.local|floatformat:0 }}</span>
+        </div>
+        <div class="proba-cell {% if probs.empate > probs.local and probs.empate > probs.visitante %}top-pick{% endif %}">
+            <span class="proba-label">Empate</span>
+            <span class="proba-pct">{{ probs.empate|floatformat:0 }}%</span>
+            <span class="proba-odd">@{{ probs.empate|floatformat:0 }}</span>
+        </div>
+        <div class="proba-cell {% if probs.visitante > probs.local and probs.visitante > probs.empate %}top-pick{% endif %}">
+            <span class="proba-label">Visitante</span>
+            <span class="proba-pct">{{ probs.visitante|floatformat:0 }}%</span>
+            <span class="proba-odd">@{{ probs.visitante|floatformat:0 }}</span>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- RECOMENDACION PRINCIPAL -->
+    {% with rec=prediction.match_report.recommended_bet %}
+    {% if rec.market %}
+    <div class="rec-card">
+        <div>
+            <div class="rec-label">🎯 Apuesta recomendada · {{ rec.market }}</div>
+            <div class="rec-pick">{{ rec.pick }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <span class="rec-prob">{{ rec.probability|floatformat:1 }}%</span>
+            <span class="conf-badge {% if rec.confidence == 'Alta' %}conf-alta{% elif rec.confidence == 'Media' %}conf-media{% else %}conf-baja{% endif %}">{{ rec.confidence }}</span>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- MARCADOR ESPERADO -->
+    {% if prediction.score_projection.expected_home is not None %}
+    <div class="score-strip">
+        <div class="score-num">{{ prediction.score_projection.expected_home|floatformat:2 }} – {{ prediction.score_projection.expected_away|floatformat:2 }}</div>
+        <div class="score-sub">Goles esperados · Marcador más probable: {{ prediction.score_projection.best_score }}</div>
+    </div>
+    {% endif %}
+
+    <!-- TODOS LOS MERCADOS -->
+    <div class="panel">
+        <h3 class="section-title">Todos los mercados</h3>
         <table>
             <thead>
                 <tr>
                     <th>Mercado</th>
                     <th>Pick</th>
-                    <th class="value">Prob.</th>
-                    <th class="value">Cuota justa</th>
+                    <th style="width:130px;">Prob.</th>
+                    <th class="r" style="width:90px;">Cuota justa</th>
                 </tr>
             </thead>
             <tbody>
@@ -135,16 +284,56 @@
                 <tr>
                     <td>{{ row.market }}</td>
                     <td>{{ row.pick }}</td>
-                    <td class="value">{{ row.probability }}%</td>
-                    <td class="value">{{ row.fair_odd|floatformat:2 }}</td>
+                    <td>
+                        <div class="prob-bar">
+                            <span style="min-width:38px;font-weight:700;color:{% if row.probability >= 65 %}#6ce3a3{% elif row.probability >= 50 %}#f6cf55{% else %}#d0d8d5{% endif %};">{{ row.probability }}%</span>
+                            <div class="bar-bg">
+                                <div class="bar-fill {% if row.probability < 50 %}lo{% elif row.probability < 65 %}mid{% endif %}" style="width:{{ row.probability }}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="r">{{ row.fair_odd|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <p class="meta">Selecciona un encuentro para mostrar todos los pronósticos disponibles.</p>
+    </div>
+
+    {% else %}
+
+    {% if error_message %}
+    <div class="panel"><p style="color:#ffd3d3;margin:0;">{{ error_message }}</p></div>
+    {% endif %}
+
+    {% endif %}
+
+    <!-- SELECTOR PARTIDO (SIEMPRE AL FINAL) -->
+    <div class="panel">
+        <h3 class="section-title" style="margin-bottom:10px;">Cambiar encuentro</h3>
+        <form method="get" class="selector-wrap">
+            <input type="hidden" name="liga" value="{{ liga }}">
+            {% if home_date %}<input type="hidden" name="home_date" value="{{ home_date }}">{% endif %}
+            <input type="hidden" name="predict" value="1">
+            <select name="match_key" required>
+                <option value="">Selecciona encuentro...</option>
+                {% for f in fixtures %}
+                <option value="{{ f.match_key }}" {% if selected_match_key == f.match_key %}selected{% endif %}>
+                    {{ f.fecha }} {{ f.hora }} · {{ f.local }} vs {{ f.visitante }}
+                </option>
+                {% endfor %}
+                {% if not fixtures and selected_match_key %}
+                <option value="{{ selected_match_key }}" selected>{{ selected_match_key }}</option>
+                {% endif %}
+            </select>
+            <button type="submit">Ver pronóstico</button>
+        </form>
+        {% if selected_match_key and not predict_enabled %}
+        <p class="error-msg">
+            <a class="btn" href="?liga={{ liga }}&match_key={{ selected_match_key|urlencode }}{% if home_date %}&home_date={{ home_date }}{% endif %}&predict=1" style="display:inline-block;margin-top:8px;">Calcular pronóstico completo</a>
+        </p>
         {% endif %}
-    </section>
+    </div>
+
 </div>
 </body>
 </html>

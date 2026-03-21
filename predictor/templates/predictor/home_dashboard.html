@@ -642,6 +642,7 @@
                     <a class="report-link" href="{% url 'best_bets_1x2_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 1X2</a>
                     <a class="report-link" href="{% url 'best_bets_double_chance_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 Doble oportunidad</a>
                     <a class="report-link" href="{% url 'best_bets_totals_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 Totales</a>
+                    <a class="report-link" href="{% url 'refresh_all_leagues' %}?run=1" target="_blank" rel="noopener noreferrer">🔄 Actualizar toda la data</a>
                 </div>
             </div>
         </section>
@@ -668,7 +669,7 @@
                             <span class="entity-inline">{% if item.away_team_logo %}<img class="entity-logo" src="{{ item.away_team_logo }}" alt="{{ item.away_team }}">{% endif %}{{ item.away_team }}</span>
                         </div>
                     </div>
-                    <div class="agenda-pick"><a href="{{ item.dashboard_url }}">Ver pronóstico</a></div>
+                    <div class="agenda-pick"><a href="{{ item.dashboard_url }}" target="_blank" rel="noopener noreferrer">Abrir pronóstico</a></div>
                 </article>
                 {% empty %}
                 <article class="agenda-item">
@@ -685,45 +686,13 @@
 
         <section class="prediction-full">
             <div class="prediction-head">
-                <h3>Pronóstico completo del encuentro</h3>
-                {% if selected_fixture %}
-                <div class="prediction-match">
-                    <span class="entity-inline">{% if selected_fixture.local_logo %}<img class="entity-logo" src="{{ selected_fixture.local_logo }}" alt="{{ selected_fixture.local }}">{% endif %}{{ selected_fixture.local }}</span>
-                    vs
-                    <span class="entity-inline">{% if selected_fixture.visitante_logo %}<img class="entity-logo" src="{{ selected_fixture.visitante_logo }}" alt="{{ selected_fixture.visitante }}">{% endif %}{{ selected_fixture.visitante }}</span>
-                    | {{ selected_fixture.fecha }} {{ selected_fixture.hora }}
-                </div>
-                {% endif %}
+                <h3>Centro de pronósticos</h3>
+                <div class="prediction-match">Los pronósticos se muestran en una pantalla independiente para mayor detalle.</div>
             </div>
-
-            {% if prediction and full_prediction_rows %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Mercado</th>
-                        <th>Pick</th>
-                        <th class="value">Prob.</th>
-                        <th class="value">Cuota justa</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in full_prediction_rows %}
-                    <tr>
-                        <td>{{ row.market }}</td>
-                        <td>{{ row.pick }}</td>
-                        <td class="value">{{ row.probability }}%</td>
-                        <td class="value">{{ row.fair_odd|floatformat:2 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="title-row" style="margin-top:10px; margin-bottom:0;">
-                <span class="meta">Marcador estimado: {{ prediction.score_projection.best_score }}</span>
-                <span class="meta">Goles esperados: {{ prediction.score_projection.expected_home }} - {{ prediction.score_projection.expected_away }}</span>
+            <div class="title-row" style="margin-bottom:0;">
+                <span class="meta">Usa los enlaces de Agenda del día para abrir cada encuentro en una nueva pestaña.</span>
+                <a class="btn gold" href="{% url 'match_prediction_page' %}" target="_blank" rel="noopener noreferrer">Ir a pronósticos</a>
             </div>
-            {% else %}
-            <p class="agenda-league">Selecciona un encuentro desde Agenda del día para ver todos los pronósticos posibles.</p>
-            {% endif %}
         </section>
 
         <section class="dashboard-grid">
