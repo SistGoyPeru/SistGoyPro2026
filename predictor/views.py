@@ -2160,7 +2160,13 @@ def best_bets_summary_pdf(request):
 			story.append(Spacer(1, 0.06 * inch))
 
 			tbl_rows = [["#", "Encuentro", "Liga", "Pick", "Prob.", "Cuota justa"]]
-			for idx, row in enumerate(sorted(date_groups[date_label], key=lambda r: r["kickoff"]), 1):
+			for idx, row in enumerate(
+				sorted(
+					date_groups[date_label],
+					key=lambda r: (-float(r[prob_key]), str(r["kickoff"])),
+				),
+				1,
+			):
 				prob = float(row[prob_key])
 				tbl_rows.append([
 					str(idx),
