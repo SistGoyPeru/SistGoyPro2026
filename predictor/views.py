@@ -2134,7 +2134,12 @@ def best_bets_summary_pdf(request):
 		if not section_items:
 			return
 
-		story.append(PageBreak())
+		# Separador visual entre secciones (sin salto de página)
+		sep = Table([['']], colWidths=[7.7 * inch], rowHeights=[2])
+		sep.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1a7d5c"))]))
+		story.append(Spacer(1, 0.15 * inch))
+		story.append(sep)
+		story.append(Spacer(1, 0.06 * inch))
 		story.append(Paragraph(section_label, section_title))
 		story.append(Paragraph(f"Solo picks con probabilidad >= {PDF_MIN_PROBABILITY:.0f}%.", body_text))
 		story.append(Spacer(1, 0.08 * inch))
@@ -2188,6 +2193,16 @@ def best_bets_summary_pdf(request):
 
 	# ── Sección 6: Apuesta Múltiple ───────────────────────────────────────────
 	if multiple_entries:
+		# Separador visual antes de sección múltiple
+		sep6 = Table([['']], colWidths=[7.7 * inch], rowHeights=[2])
+		sep6.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#145433"))]))
+		story.append(Spacer(1, 0.15 * inch))
+		story.append(sep6)
+		story.append(Spacer(1, 0.06 * inch))
+		story.append(Paragraph("Seccion 6: Apuesta Multiple", section_title))
+		story.append(Paragraph(f"Encuentros con 2 o mas mercados >= {PDF_MIN_PROBABILITY:.0f}% (combinados).", body_text))
+		story.append(Spacer(1, 0.08 * inch))
+
 		multi_date_groups: dict[str, list] = {}
 		for row, picks in multiple_entries:
 			multi_date_groups.setdefault(str(row["date_label"]), []).append((row, picks))
