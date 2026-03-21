@@ -5,6 +5,8 @@ gunicorn==23.0.0
 numpy==2.4.2
 pandas==3.0.1
 requests==2.32.5
+chardet==5.2.0
+urllib3==2.2.3
 scikit-learn==1.8.0
 scipy==1.17.1
 statsmodels==0.14.6

@@ -1,0 +1,314 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ league_name }} | SistGoy PRO</title>
+    <link rel="icon" type="image/jpeg" href="{% static 'predictor/brand/logo.jpg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-1: #072e20;
+            --bg-2: #0d4a31;
+            --bg-3: #091f15;
+            --panel: rgba(9, 34, 23, 0.9);
+            --panel-soft: rgba(13, 46, 31, 0.76);
+            --line: rgba(188, 225, 200, 0.18);
+            --text: #edf8f1;
+            --muted: #a7c7b7;
+            --accent: #f6cf55;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Source Sans 3", "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 15% 8%, rgba(246, 207, 85, 0.14), transparent 28%),
+                radial-gradient(circle at 82% 12%, rgba(108, 227, 163, 0.12), transparent 22%),
+                linear-gradient(170deg, var(--bg-1), var(--bg-2) 52%, var(--bg-3));
+        }
+        .wrap { width: min(1440px, 100%); margin: 0 auto; padding: 14px; }
+        .top, .panel { border: 1px solid var(--line); border-radius: 14px; }
+        .top {
+            background: linear-gradient(90deg, #016d48, #0b8d5b);
+            padding: 10px 12px;
+            display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .brand img { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; }
+        .brand h1 { margin: 0; font-family: "Barlow Condensed", sans-serif; font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.05em; color: #ffe57b; }
+        .btn { text-decoration: none; color: #ecf8f1; border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; padding: 8px 10px; font-weight: 700; font-size: 0.8rem; background: rgba(0,0,0,0.16); }
+        .hero { background: var(--panel); padding: 14px; margin-bottom: 14px; }
+        .hero-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .hero-head img { width: 46px; height: 46px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,0.06); padding: 4px; }
+        .hero h2 { margin: 0; font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: 0.05em; font-size: 1.8rem; }
+        .hero p { margin: 8px 0 0; color: var(--muted); }
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px; }
+        .stat-box, .mini-card, .split-card, .leader-card { background: var(--panel-soft); border: 1px solid var(--line); border-radius: 11px; padding: 10px; }
+        .stat-box span, .mini-card span { display: block; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        .stat-box strong, .mini-card strong { display: block; margin-top: 4px; font-size: 1.05rem; }
+        .layout { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 14px; }
+        .panel { background: var(--panel); padding: 14px; }
+        .section-title { margin: 0 0 10px; color: var(--accent); font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: 0.05em; font-size: 1.12rem; }
+        .leaders-grid, .team-split-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .leader-card h4, .split-card h4 { margin: 0 0 8px; color: var(--accent); font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; font-size: 0.95rem; }
+        .leader-card ul { margin: 0; padding-left: 18px; }
+        .leader-card li { margin: 6px 0; }
+        .team-link { color: #d9efe3; text-decoration: none; font-weight: 700; }
+        .team-link:hover { color: #ffe58f; }
+        .team-cell, .team-inline { display: flex; align-items: center; gap: 8px; }
+        .team-logo { width: 20px; height: 20px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,0.08); padding: 2px; flex: 0 0 auto; }
+        .team-logo.lg { width: 28px; height: 28px; padding: 3px; }
+        table { width: 100%; border-collapse: collapse; border: 1px solid rgba(255,255,255,0.08); }
+        th, td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; font-size: 0.82rem; }
+        th { background: rgba(255,255,255,0.05); color: #cfe6d9; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; }
+        tr:last-child td { border-bottom: none; }
+        .value { text-align: right; color: var(--accent); font-weight: 700; }
+        .form { display: grid; gap: 10px; }
+        select, button { width: 100%; border-radius: 10px; border: 1px solid var(--line); padding: 10px; font: inherit; }
+        select { background: rgba(7, 29, 19, 0.82); color: #ebf7f1; }
+        button { background: linear-gradient(135deg, #ffd876, #f6cf55); color: #173728; font-weight: 700; border: none; text-transform: uppercase; }
+        .sportsbook-head, .sportsbook-row { display: grid; grid-template-columns: 1fr 70px 70px 70px; }
+        .sportsbook-head { background: #15865a; color: #ecfaf3; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; }
+        .sportsbook-row { border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sportsbook-head span, .sportsbook-row > div { padding: 8px; }
+        .sportsbook-odd { display: flex; justify-content: center; align-items: center; color: #ffde59; font-weight: 700; border-left: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.16); }
+        .muted { color: var(--muted); font-size: 0.75rem; }
+        .form-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; padding: 3px 8px; border-radius: 999px; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.04em; border: 1px solid transparent; }
+        .form-badge.win { background: rgba(82, 216, 142, 0.2); border-color: rgba(82, 216, 142, 0.6); color: #aef4ca; }
+        .form-badge.draw { background: rgba(246, 207, 85, 0.18); border-color: rgba(246, 207, 85, 0.6); color: #ffe7a2; }
+        .form-badge.loss { background: rgba(242, 113, 113, 0.2); border-color: rgba(242, 113, 113, 0.58); color: #ffc3c3; }
+        .form-strip { display: inline-flex; gap: 4px; align-items: center; justify-content: flex-end; }
+        @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .layout { grid-template-columns: 1fr; } .leaders-grid, .team-split-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) { .sportsbook-head, .sportsbook-row { grid-template-columns: 1fr 58px 58px 58px; } }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header class="top">
+        <div class="brand">
+            <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoy PRO">
+            <h1>{{ league_name }}</h1>
+        </div>
+        <a class="btn" href="/">Volver al dashboard</a>
+    </header>
+
+    <section class="hero panel">
+        <div class="hero-head">
+            <img src="{{ league_logo_url }}" alt="{{ league_name }}">
+            <div>
+                <h2>{{ league_name }}</h2>
+                <p>{{ league_stats.market_tone }} | {{ league_stats.total_matches }} partidos analizados</p>
+            </div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-box"><span>Media goles</span><strong>{{ league_stats.avg_goals }}</strong></div>
+            <div class="stat-box"><span>Over 1.5</span><strong>{{ league_stats.over15_pct }}%</strong></div>
+            <div class="stat-box"><span>Over 2.5</span><strong>{{ league_stats.over25_pct }}%</strong></div>
+            <div class="stat-box"><span>Under 3.5</span><strong>{{ league_stats.under35_pct }}%</strong></div>
+            <div class="stat-box"><span>Under 4.5</span><strong>{{ league_stats.under45_pct }}%</strong></div>
+            <div class="stat-box"><span>BTTS</span><strong>{{ league_stats.btts_pct }}%</strong></div>
+            <div class="stat-box"><span>Local</span><strong>{{ league_stats.home_win_pct }}%</strong></div>
+            <div class="stat-box"><span>Empate</span><strong>{{ league_stats.draw_pct }}%</strong></div>
+            <div class="stat-box"><span>Visitante</span><strong>{{ league_stats.away_win_pct }}%</strong></div>
+            <div class="stat-box"><span>Corners</span><strong>{{ league_stats.avg_corners }}</strong></div>
+            <div class="stat-box"><span>Tarjetas</span><strong>{{ league_stats.avg_cards }}</strong></div>
+            <div class="stat-box"><span>Rojas</span><strong>{{ league_stats.red_match_pct }}%</strong></div>
+        </div>
+    </section>
+
+    <section class="layout">
+        <article class="panel">
+            <h3 class="section-title">Tabla completa</h3>
+            <table>
+                <thead>
+                    <tr><th>#</th><th>Equipo</th><th>PJ</th><th>Pts</th><th>PPP</th><th>GF</th><th>GC</th><th>DG</th><th>Forma</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in league_stats.table_rows %}
+                    <tr>
+                        <td>{{ row.position }}</td>
+                        <td>
+                            <div class="team-cell">
+                                {% if row.logo %}<img class="team-logo" src="{{ row.logo }}" alt="{{ row.team }}">{% endif %}
+                                <a class="team-link" href="?team={{ row.team|urlencode }}#team-detail">{{ row.team }}</a>
+                            </div>
+                        </td>
+                        <td>{{ row.played }}</td>
+                        <td>{{ row.points }}</td>
+                        <td>{{ row.ppp }}</td>
+                        <td>{{ row.gf }}</td>
+                        <td>{{ row.ga }}</td>
+                        <td class="value">{{ row.gd }}</td>
+                        <td>
+                            <span class="form-strip">
+                                {% for f in row.form %}
+                                    {% if f == 'W' %}
+                                    <span class="form-badge win">W</span>
+                                    {% elif f == 'D' %}
+                                    <span class="form-badge draw">D</span>
+                                    {% elif f == 'L' %}
+                                    <span class="form-badge loss">L</span>
+                                    {% endif %}
+                                {% empty %}
+                                <span class="muted">-</span>
+                                {% endfor %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </article>
+
+        <aside class="panel">
+            <h3 class="section-title">Mercados y próximos partidos</h3>
+            {% if refresh_status %}<p class="muted">{{ refresh_status }}</p>{% endif %}
+            <div class="leaders-grid" style="margin-bottom:12px;">
+                <article class="leader-card">
+                    <h4>Mejor ataque</h4>
+                    <ul>
+                        {% for item in league_stats.attack_leaders %}
+                        <li>
+                            <span class="team-inline">
+                                {% if item.logo %}<img class="team-logo" src="{{ item.logo }}" alt="{{ item.team }}">{% endif %}
+                                <a class="team-link" href="?team={{ item.team|urlencode }}#team-detail">{{ item.team }}</a>: {{ item.value }} GF
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </article>
+                <article class="leader-card">
+                    <h4>Mejor defensa</h4>
+                    <ul>
+                        {% for item in league_stats.defense_leaders %}
+                        <li>
+                            <span class="team-inline">
+                                {% if item.logo %}<img class="team-logo" src="{{ item.logo }}" alt="{{ item.team }}">{% endif %}
+                                <a class="team-link" href="?team={{ item.team|urlencode }}#team-detail">{{ item.team }}</a>: {{ item.value }} GC
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </article>
+            </div>
+            <div class="leader-card" style="margin-bottom:12px;">
+                <h4>Recomendaciones</h4>
+                <ul>
+                    {% for note in league_stats.recommendations %}
+                    <li>{{ note }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="leader-card">
+                <h4>Totales prepartido</h4>
+                <div class="sportsbook-head"><span>Partido</span><span>O1.5</span><span>U3.5</span><span>U4.5</span></div>
+                {% for row in sportsbook_rows %}
+                <div class="sportsbook-row">
+                    <div>
+                        <strong>{{ row.local }} vs {{ row.visitante }}</strong>
+                        <div class="muted">{{ row.hora }}</div>
+                    </div>
+                    <div class="sportsbook-odd">{{ row.odd_over_1_5|floatformat:2 }}</div>
+                    <div class="sportsbook-odd">{{ row.odd_under_3_5|floatformat:2 }}</div>
+                    <div class="sportsbook-odd">{{ row.odd_under_4_5|floatformat:2 }}</div>
+                </div>
+                {% empty %}
+                <div class="sportsbook-row"><div>Sin partidos</div><div class="sportsbook-odd">-</div><div class="sportsbook-odd">-</div><div class="sportsbook-odd">-</div></div>
+                {% endfor %}
+            </div>
+        </aside>
+    </section>
+
+    <section id="team-detail" class="panel" style="margin-top:14px;">
+        {% if team_stats %}
+        <h3 class="section-title">
+            <span class="team-inline">
+                {% if team_stats.team_logo %}<img class="team-logo lg" src="{{ team_stats.team_logo }}" alt="{{ team_stats.team }}">{% endif %}
+                {{ team_stats.team }} | Estadísticas completas
+            </span>
+        </h3>
+        <div class="stats-grid">
+            <div class="stat-box"><span>Posición</span><strong>{{ team_stats.position }}</strong></div>
+            <div class="stat-box"><span>Puntos</span><strong>{{ team_stats.points }}</strong></div>
+            <div class="stat-box"><span>PPP</span><strong>{{ team_stats.ppp }}</strong></div>
+            <div class="stat-box"><span>Partidos</span><strong>{{ team_stats.matches }}</strong></div>
+            <div class="stat-box"><span>Balance</span><strong>{{ team_stats.wins }}-{{ team_stats.draws }}-{{ team_stats.losses }}</strong></div>
+            <div class="stat-box"><span>GF / GC / DG</span><strong>{{ team_stats.gf }} / {{ team_stats.ga }} / {{ team_stats.gd }}</strong></div>
+            <div class="stat-box"><span>Tiros</span><strong>{{ team_stats.avg_shots }}</strong></div>
+            <div class="stat-box"><span>Tiros a puerta</span><strong>{{ team_stats.avg_shots_on_target }}</strong></div>
+            <div class="stat-box"><span>Corners</span><strong>{{ team_stats.avg_corners }}</strong></div>
+            <div class="stat-box"><span>BTTS</span><strong>{{ team_stats.btts_pct }}%</strong></div>
+            <div class="stat-box"><span>Over 1.5</span><strong>{{ team_stats.over15_pct }}%</strong></div>
+            <div class="stat-box"><span>Over 2.5</span><strong>{{ team_stats.over25_pct }}%</strong></div>
+            <div class="stat-box"><span>Under 3.5</span><strong>{{ team_stats.under35_pct }}%</strong></div>
+            <div class="stat-box"><span>Under 4.5</span><strong>{{ team_stats.under45_pct }}%</strong></div>
+            <div class="stat-box"><span>Clean sheets</span><strong>{{ team_stats.clean_sheet_pct }}%</strong></div>
+            <div class="stat-box"><span>Sin marcar</span><strong>{{ team_stats.failed_to_score_pct }}%</strong></div>
+        </div>
+        <div class="team-split-grid">
+            <article class="split-card">
+                <h4>Local</h4>
+                <table><tbody>
+                    <tr><td>PJ</td><td class="value">{{ team_stats.home.matches }}</td></tr>
+                    <tr><td>Puntos</td><td class="value">{{ team_stats.home.points }}</td></tr>
+                    <tr><td>PPP</td><td class="value">{{ team_stats.home.ppp }}</td></tr>
+                    <tr><td>Balance</td><td class="value">{{ team_stats.home.wins }}-{{ team_stats.home.draws }}-{{ team_stats.home.losses }}</td></tr>
+                    <tr><td>GF / GC</td><td class="value">{{ team_stats.home.gf }} / {{ team_stats.home.ga }}</td></tr>
+                </tbody></table>
+            </article>
+            <article class="split-card">
+                <h4>Visitante</h4>
+                <table><tbody>
+                    <tr><td>PJ</td><td class="value">{{ team_stats.away.matches }}</td></tr>
+                    <tr><td>Puntos</td><td class="value">{{ team_stats.away.points }}</td></tr>
+                    <tr><td>PPP</td><td class="value">{{ team_stats.away.ppp }}</td></tr>
+                    <tr><td>Balance</td><td class="value">{{ team_stats.away.wins }}-{{ team_stats.away.draws }}-{{ team_stats.away.losses }}</td></tr>
+                    <tr><td>GF / GC</td><td class="value">{{ team_stats.away.gf }} / {{ team_stats.away.ga }}</td></tr>
+                </tbody></table>
+            </article>
+        </div>
+        <article class="leader-card">
+            <h4>Últimos partidos</h4>
+            <table>
+                <thead><tr><th>Fecha</th><th>Sede</th><th>Rival</th><th>Marcador</th><th>Resultado</th></tr></thead>
+                <tbody>
+                    {% for item in team_stats.recent_matches %}
+                    <tr>
+                        <td>{{ item.date }}</td>
+                        <td>{{ item.venue }}</td>
+                        <td>
+                            <span class="team-inline">
+                                {% if item.opponent_logo %}<img class="team-logo" src="{{ item.opponent_logo }}" alt="{{ item.opponent }}">{% endif %}
+                                {{ item.opponent }}
+                            </span>
+                        </td>
+                        <td>{{ item.score }}</td>
+                        <td class="value">
+                            {% if item.result == 'W' %}
+                            <span class="form-badge win">W</span>
+                            {% elif item.result == 'D' %}
+                            <span class="form-badge draw">D</span>
+                            {% elif item.result == 'L' %}
+                            <span class="form-badge loss">L</span>
+                            {% else %}
+                            <span class="form-badge">{{ item.result }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </article>
+        {% else %}
+        <h3 class="section-title">Ficha del equipo</h3>
+        <p class="muted">Haz clic en cualquier equipo de la liga para abrir todas sus estadísticas.</p>
+        {% endif %}
+    </section>
+</div>
+</body>
+</html>

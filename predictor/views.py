@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from io import BytesIO
 import re
+from collections import defaultdict
 
 from django.shortcuts import render
 from django.http import HttpResponse
@@ -34,9 +35,59 @@ LEAGUE_SERVICE_FACTORIES = {
 	"eredivisie": get_prediction_service_eredivisie,
 }
 
+VALID_LEAGUES = tuple(LEAGUE_SERVICE_FACTORIES.keys())
+
+LEAGUE_NAMES = {
+	"spain": "LaLiga",
+	"bundesliga": "Bundesliga",
+	"premier": "Premier League",
+	"seriea": "Serie A",
+	"ligue1": "Ligue 1",
+	"primeiraliga": "Primeira Liga",
+	"proleague": "Pro League",
+	"eredivisie": "Eredivisie",
+}
+
+
+def _team_logo(service, team_name: str) -> str:
+	team = str(team_name or "").strip()
+	if not team:
+		return ""
+	logo_getter = getattr(service, "_team_logo_url", None)
+	if callable(logo_getter):
+		return str(logo_getter(team) or "")
+	return ""
+
 
 def _get_service(liga: str):
 	return LEAGUE_SERVICE_FACTORIES.get(liga, get_prediction_service_spain)()
+
+
+def _build_sportsbook_rows(service, fixtures: list[dict[str, object]], limit: int | None = 8) -> list[dict[str, object]]:
+	rows: list[dict[str, object]] = []
+	selected_fixtures = fixtures if limit is None else fixtures[:limit]
+	for fixture in selected_fixtures:
+		try:
+			match_prediction = service.predict_match(str(fixture.get("match_key", "")))
+			totals_market = match_prediction.get("markets", {}).get("totales", {})
+			over_1_5 = float(totals_market.get("over_1_5", 0.0))
+			under_3_5 = float(totals_market.get("under_3_5", 0.0))
+			under_4_5 = float(totals_market.get("under_4_5", 0.0))
+			rows.append(
+				{
+					"local": fixture.get("local", ""),
+					"visitante": fixture.get("visitante", ""),
+					"hora": fixture.get("hora", ""),
+					"local_logo": fixture.get("local_logo", ""),
+					"visitante_logo": fixture.get("visitante_logo", ""),
+					"odd_over_1_5": _fair_odds(over_1_5),
+					"odd_under_3_5": _fair_odds(under_3_5),
+					"odd_under_4_5": _fair_odds(under_4_5),
+				}
+			)
+		except Exception:
+			continue
+	return rows
 
 
 def _parse_fixture_date(value: str):
@@ -143,32 +194,107 @@ def _value_signal(probability_pct: float, offered_odd: float | None) -> dict[str
 	}
 
 
+def _build_full_prediction_rows(prediction: dict[str, object] | None) -> list[dict[str, object]]:
+	if not isinstance(prediction, dict):
+		return []
+
+	probabilities = prediction.get("probabilities", {}) if isinstance(prediction.get("probabilities", {}), dict) else {}
+	markets = prediction.get("markets", {}) if isinstance(prediction.get("markets", {}), dict) else {}
+
+	def add_row(container: list[dict[str, object]], market: str, pick: str, value: object) -> None:
+		prob = _safe_float(value)
+		container.append(
+			{
+				"market": market,
+				"pick": pick,
+				"probability": round(prob, 2),
+				"fair_odd": _fair_odds(prob),
+			}
+		)
+
+	rows: list[dict[str, object]] = []
+	add_row(rows, "1X2", "Local", probabilities.get("local", 0.0))
+	add_row(rows, "1X2", "Empate", probabilities.get("empate", 0.0))
+	add_row(rows, "1X2", "Visitante", probabilities.get("visitante", 0.0))
+
+	dc = markets.get("doble_oportunidad", {}) if isinstance(markets.get("doble_oportunidad", {}), dict) else {}
+	add_row(rows, "Doble oportunidad", "1X", dc.get("uno_x", 0.0))
+	add_row(rows, "Doble oportunidad", "12", dc.get("uno_dos", 0.0))
+	add_row(rows, "Doble oportunidad", "X2", dc.get("x_dos", 0.0))
+
+	btts = markets.get("btts", {}) if isinstance(markets.get("btts", {}), dict) else {}
+	add_row(rows, "Ambos marcan", "Si", btts.get("si", 0.0))
+	add_row(rows, "Ambos marcan", "No", btts.get("no", 0.0))
+
+	totals = markets.get("totales", {}) if isinstance(markets.get("totales", {}), dict) else {}
+	add_row(rows, "Totales", "Over 1.5", totals.get("over_1_5", 0.0))
+	add_row(rows, "Totales", "Over 2.5", totals.get("over_2_5", 0.0))
+	add_row(rows, "Totales", "Under 3.5", totals.get("under_3_5", 0.0))
+	add_row(rows, "Totales", "Under 4.5", totals.get("under_4_5", 0.0))
+
+	corners = markets.get("corners_8_5", {}) if isinstance(markets.get("corners_8_5", {}), dict) else {}
+	add_row(rows, "Corners 8.5", "Over 8.5", corners.get("over", 0.0))
+	add_row(rows, "Corners 8.5", "Under 8.5", corners.get("under", 0.0))
+
+	cards = markets.get("tarjetas", {}) if isinstance(markets.get("tarjetas", {}), dict) else {}
+	yellow = cards.get("amarillas", {}) if isinstance(cards.get("amarillas", {}), dict) else {}
+	add_row(rows, "Tarjetas amarillas", "Over 3.5", yellow.get("over_3_5", 0.0))
+	add_row(rows, "Tarjetas amarillas", "Under 3.5", yellow.get("under_3_5", 0.0))
+
+	red = cards.get("rojas", {}) if isinstance(cards.get("rojas", {}), dict) else {}
+	add_row(rows, "Tarjetas rojas", "Over 0.5", red.get("over_0_5", 0.0))
+	add_row(rows, "Tarjetas rojas", "Under 0.5", red.get("under_0_5", 0.0))
+
+	total_cards = cards.get("totales", {}) if isinstance(cards.get("totales", {}), dict) else {}
+	add_row(rows, "Tarjetas totales", "Over 3.5", total_cards.get("over_3_5", 0.0))
+	add_row(rows, "Tarjetas totales", "Under 3.5", total_cards.get("under_3_5", 0.0))
+	add_row(rows, "Tarjetas totales", "Over 4.5", total_cards.get("over_4_5", 0.0))
+	add_row(rows, "Tarjetas totales", "Under 4.5", total_cards.get("under_4_5", 0.0))
+
+	return sorted(rows, key=lambda row: (float(row.get("probability", 0.0)), str(row.get("market", ""))), reverse=True)
+
+
 def _build_league_stats(service) -> dict[str, object]:
 	df = service.historical_df
 	total_matches = int(len(df))
 	if total_matches <= 0:
 		return {
+			"league_name": service.league_name,
+			"league_logo_url": service.league_logo_url,
 			"total_matches": 0,
 			"avg_goals": 0.0,
+			"avg_home_goals": 0.0,
+			"avg_away_goals": 0.0,
 			"home_win_pct": 0.0,
 			"draw_pct": 0.0,
 			"away_win_pct": 0.0,
 			"btts_pct": 0.0,
+			"over15_pct": 0.0,
 			"over25_pct": 0.0,
+			"under35_pct": 0.0,
+			"under45_pct": 0.0,
 			"avg_corners": 0.0,
 			"avg_cards": 0.0,
 			"red_match_pct": 0.0,
 			"market_tone": "Sin datos",
 			"recommendations": ["No hay suficientes partidos historicos para clasificar tendencias."],
 			"top_table": [],
+			"table_rows": [],
+			"attack_leaders": [],
+			"defense_leaders": [],
 		}
 
 	home_win_pct = round(float((df["FTR"] == "H").mean() * 100), 2)
 	draw_pct = round(float((df["FTR"] == "D").mean() * 100), 2)
 	away_win_pct = round(float((df["FTR"] == "A").mean() * 100), 2)
 	avg_goals = round(float((df["FTHG"] + df["FTAG"]).mean()), 2)
+	avg_home_goals = round(float(df["FTHG"].mean()), 2)
+	avg_away_goals = round(float(df["FTAG"].mean()), 2)
 	btts_pct = round(float(((df["FTHG"] > 0) & (df["FTAG"] > 0)).mean() * 100), 2)
+	over15_pct = round(float(((df["FTHG"] + df["FTAG"]) > 1).mean() * 100), 2)
 	over25_pct = round(float(((df["FTHG"] + df["FTAG"]) > 2).mean() * 100), 2)
+	under35_pct = round(float(((df["FTHG"] + df["FTAG"]) < 4).mean() * 100), 2)
+	under45_pct = round(float(((df["FTHG"] + df["FTAG"]) < 5).mean() * 100), 2)
 	avg_corners = round(float((df["HC"] + df["AC"]).mean()), 2)
 	avg_cards = round(float((df["HY"] + df["AY"] + df["HR"] + df["AR"]).mean()), 2)
 	red_match_pct = round(float(((df["HR"] + df["AR"]) > 0).mean() * 100), 2)
@@ -205,30 +331,242 @@ def _build_league_stats(service) -> dict[str, object]:
 		key=lambda row: (row.get("points", 0), row.get("gd", 0), row.get("gf", 0)),
 		reverse=True,
 	)[:5]
+	form_by_team: dict[str, list[str]] = defaultdict(list)
+	for _, row in df.sort_values(["Date", "Time"]).iterrows():
+		home_team = str(row.get("HomeTeam", "")).strip()
+		away_team = str(row.get("AwayTeam", "")).strip()
+		result = str(row.get("FTR", "")).strip().upper()
+		home_form = "D"
+		away_form = "D"
+		if result == "H":
+			home_form = "W"
+			away_form = "L"
+		elif result == "A":
+			home_form = "L"
+			away_form = "W"
+		if home_team:
+			form_by_team[home_team].append(home_form)
+		if away_team:
+			form_by_team[away_team].append(away_form)
 	top_table = [
 		{
 			"position": team.get("position", 0),
 			"team": team.get("team", ""),
+			"logo": _team_logo(service, str(team.get("team", ""))),
+			"form": form_by_team.get(str(team.get("team", "")), [])[-5:],
 			"points": team.get("points", 0),
 			"gd": team.get("gd", 0),
 		}
 		for team in top_table_raw
 	]
+	table_rows = [
+		{
+			"position": team.get("position", 0),
+			"team": team.get("team", ""),
+			"logo": _team_logo(service, str(team.get("team", ""))),
+			"form": form_by_team.get(str(team.get("team", "")), [])[-5:],
+			"played": team.get("played", 0),
+			"points": team.get("points", 0),
+			"ppp": round((float(team.get("points", 0)) / float(team.get("played", 1))) if float(team.get("played", 0)) > 0 else 0.0, 2),
+			"gf": team.get("gf", 0),
+			"ga": team.get("ga", 0),
+			"gd": team.get("gd", 0),
+		}
+		for team in sorted(
+			service.standings_snapshot.values(),
+			key=lambda row: (row.get("position", 999), -row.get("points", 0)),
+		)
+	]
+	attack_leaders = [
+		{
+			"team": team.get("team", ""),
+			"logo": _team_logo(service, str(team.get("team", ""))),
+			"value": team.get("gf", 0),
+		}
+		for team in sorted(service.standings_snapshot.values(), key=lambda row: row.get("gf", 0), reverse=True)[:5]
+	]
+	defense_leaders = [
+		{
+			"team": team.get("team", ""),
+			"logo": _team_logo(service, str(team.get("team", ""))),
+			"value": team.get("ga", 0),
+		}
+		for team in sorted(service.standings_snapshot.values(), key=lambda row: row.get("ga", 999))[:5]
+	]
 
 	return {
+		"league_name": service.league_name,
+		"league_logo_url": service.league_logo_url,
 		"total_matches": total_matches,
 		"avg_goals": avg_goals,
+		"avg_home_goals": avg_home_goals,
+		"avg_away_goals": avg_away_goals,
 		"home_win_pct": home_win_pct,
 		"draw_pct": draw_pct,
 		"away_win_pct": away_win_pct,
 		"btts_pct": btts_pct,
+		"over15_pct": over15_pct,
 		"over25_pct": over25_pct,
+		"under35_pct": under35_pct,
+		"under45_pct": under45_pct,
 		"avg_corners": avg_corners,
 		"avg_cards": avg_cards,
 		"red_match_pct": red_match_pct,
 		"market_tone": market_tone,
 		"recommendations": recommendations,
 		"top_table": top_table,
+		"table_rows": table_rows,
+		"attack_leaders": attack_leaders,
+		"defense_leaders": defense_leaders,
+	}
+
+
+def _build_team_detail(service, team_name: str | None) -> dict[str, object] | None:
+	team = str(team_name or "").strip()
+	if not team:
+		return None
+
+	df = service.historical_df.copy()
+	team_matches = df[(df["HomeTeam"] == team) | (df["AwayTeam"] == team)].copy()
+	if team_matches.empty:
+		return None
+
+	stats = {
+		"matches": 0,
+		"wins": 0,
+		"draws": 0,
+		"losses": 0,
+		"points": 0,
+		"gf": 0,
+		"ga": 0,
+		"shots": 0.0,
+		"shots_on_target": 0.0,
+		"corners": 0.0,
+		"yellow_cards": 0.0,
+		"red_cards": 0.0,
+		"clean_sheets": 0,
+		"failed_to_score": 0,
+		"btts": 0,
+		"over15": 0,
+		"over25": 0,
+		"under35": 0,
+		"under45": 0,
+	}
+	home = {"matches": 0, "points": 0, "wins": 0, "draws": 0, "losses": 0, "gf": 0, "ga": 0}
+	away = {"matches": 0, "points": 0, "wins": 0, "draws": 0, "losses": 0, "gf": 0, "ga": 0}
+	recent_matches: list[dict[str, object]] = []
+
+	for _, row in team_matches.sort_values(["Date", "Time"]).iterrows():
+		is_home = row["HomeTeam"] == team
+		goals_for = int(row["FTHG"] if is_home else row["FTAG"])
+		goals_against = int(row["FTAG"] if is_home else row["FTHG"])
+		shots = float(row["HS"] if is_home else row["AS"])
+		shots_on_target = float(row["HST"] if is_home else row["AST"])
+		corners = float(row["HC"] if is_home else row["AC"])
+		yellow_cards = float(row["HY"] if is_home else row["AY"])
+		red_cards = float(row["HR"] if is_home else row["AR"])
+		if goals_for > goals_against:
+			result = "W"
+			points = 3
+		elif goals_for == goals_against:
+			result = "D"
+			points = 1
+		else:
+			result = "L"
+			points = 0
+
+		stats["matches"] += 1
+		stats["wins"] += 1 if result == "W" else 0
+		stats["draws"] += 1 if result == "D" else 0
+		stats["losses"] += 1 if result == "L" else 0
+		stats["points"] += points
+		stats["gf"] += goals_for
+		stats["ga"] += goals_against
+		stats["shots"] += shots
+		stats["shots_on_target"] += shots_on_target
+		stats["corners"] += corners
+		stats["yellow_cards"] += yellow_cards
+		stats["red_cards"] += red_cards
+		stats["clean_sheets"] += 1 if goals_against == 0 else 0
+		stats["failed_to_score"] += 1 if goals_for == 0 else 0
+		stats["btts"] += 1 if goals_for > 0 and goals_against > 0 else 0
+		total_goals = goals_for + goals_against
+		stats["over15"] += 1 if total_goals > 1 else 0
+		stats["over25"] += 1 if total_goals > 2 else 0
+		stats["under35"] += 1 if total_goals < 4 else 0
+		stats["under45"] += 1 if total_goals < 5 else 0
+
+		split = home if is_home else away
+		split["matches"] += 1
+		split["points"] += points
+		split["wins"] += 1 if result == "W" else 0
+		split["draws"] += 1 if result == "D" else 0
+		split["losses"] += 1 if result == "L" else 0
+		split["gf"] += goals_for
+		split["ga"] += goals_against
+
+		opponent = str(row["AwayTeam"] if is_home else row["HomeTeam"])
+		recent_matches.append(
+			{
+				"date": row["Date"].strftime("%d/%m/%Y") if hasattr(row["Date"], "strftime") else "",
+				"venue": "Local" if is_home else "Visitante",
+				"opponent": opponent,
+				"opponent_logo": _team_logo(service, opponent),
+				"score": f"{goals_for}-{goals_against}",
+				"result": result,
+			}
+		)
+
+	matches = max(int(stats["matches"]), 1)
+	standing = service.standings_snapshot.get(team, {})
+	return {
+		"team": team,
+		"team_logo": _team_logo(service, team),
+		"position": int(standing.get("position", 0)),
+		"points": int(stats["points"]),
+		"ppp": round(float(stats["points"]) / matches, 2),
+		"matches": int(stats["matches"]),
+		"wins": int(stats["wins"]),
+		"draws": int(stats["draws"]),
+		"losses": int(stats["losses"]),
+		"gf": int(stats["gf"]),
+		"ga": int(stats["ga"]),
+		"gd": int(stats["gf"] - stats["ga"]),
+		"avg_goals_for": round(float(stats["gf"]) / matches, 2),
+		"avg_goals_against": round(float(stats["ga"]) / matches, 2),
+		"avg_shots": round(float(stats["shots"]) / matches, 2),
+		"avg_shots_on_target": round(float(stats["shots_on_target"]) / matches, 2),
+		"avg_corners": round(float(stats["corners"]) / matches, 2),
+		"avg_yellow_cards": round(float(stats["yellow_cards"]) / matches, 2),
+		"avg_red_cards": round(float(stats["red_cards"]) / matches, 2),
+		"clean_sheet_pct": round((float(stats["clean_sheets"]) / matches) * 100, 2),
+		"failed_to_score_pct": round((float(stats["failed_to_score"]) / matches) * 100, 2),
+		"btts_pct": round((float(stats["btts"]) / matches) * 100, 2),
+		"over15_pct": round((float(stats["over15"]) / matches) * 100, 2),
+		"over25_pct": round((float(stats["over25"]) / matches) * 100, 2),
+		"under35_pct": round((float(stats["under35"]) / matches) * 100, 2),
+		"under45_pct": round((float(stats["under45"]) / matches) * 100, 2),
+		"home": {
+			"matches": int(home["matches"]),
+			"points": int(home["points"]),
+			"ppp": round((float(home["points"]) / float(home["matches"])) if float(home["matches"]) > 0 else 0.0, 2),
+			"wins": int(home["wins"]),
+			"draws": int(home["draws"]),
+			"losses": int(home["losses"]),
+			"gf": int(home["gf"]),
+			"ga": int(home["ga"]),
+		},
+		"away": {
+			"matches": int(away["matches"]),
+			"points": int(away["points"]),
+			"ppp": round((float(away["points"]) / float(away["matches"])) if float(away["matches"]) > 0 else 0.0, 2),
+			"wins": int(away["wins"]),
+			"draws": int(away["draws"]),
+			"losses": int(away["losses"]),
+			"gf": int(away["gf"]),
+			"ga": int(away["ga"]),
+		},
+		"recent_matches": recent_matches[-8:][::-1],
 	}
 
 
@@ -282,7 +620,7 @@ def _best_bets_snapshot(max_items: int = 8) -> dict[str, object]:
 				"confidence": str(recommended.get("confidence", "Baja")),
 				"multiple_confidence": str(multiple.get("confidence", "Baja")),
 				"multiple_combined_probability": float(multiple.get("prob_combinada", 0.0)),
-				"dashboard_url": f"/?liga={liga_key}&match_key={fixture.get('match_key', '')}",
+				"dashboard_url": f"/pronostico/?liga={liga_key}&match_key={fixture.get('match_key', '')}&home_date={selected_date.strftime('%Y-%m-%d')}",
 			}
 		)
 
@@ -354,6 +692,8 @@ def _build_multileague_home(selected_date_raw: str | None) -> dict[str, object]:
 				"kickoff": str(fixture.get("hora", "")),
 				"home_team": str(fixture.get("local", "")),
 				"away_team": str(fixture.get("visitante", "")),
+				"home_team_logo": str(fixture.get("local_logo", "")) or _team_logo(service, str(fixture.get("local", ""))),
+				"away_team_logo": str(fixture.get("visitante_logo", "")) or _team_logo(service, str(fixture.get("visitante", ""))),
 				"market": str(recommended.get("market", "Sin datos")),
 				"pick": str(recommended.get("pick", "Sin recomendacion")),
 				"probability": float(recommended.get("probability", 0.0)),
@@ -428,10 +768,41 @@ def _build_multileague_home(selected_date_raw: str | None) -> dict[str, object]:
 
 	return {
 		"selected_date_label": selected_date.strftime("%d/%m/%Y"),
+		"selected_date_value": selected_date.strftime("%Y-%m-%d"),
 		"date_options": date_options,
 		"league_cards": league_cards,
 		"entries": entries,
 	}
+
+
+def _get_pdf_target_fixtures(request) -> tuple[list[tuple[str, object, dict[str, object], object]], object | None]:
+	today = datetime.now().date()
+	selected_date = None
+	selected_date_raw = str(request.GET.get("date", "")).strip()
+	if selected_date_raw:
+		try:
+			selected_date = datetime.strptime(selected_date_raw, "%Y-%m-%d").date()
+		except ValueError:
+			selected_date = None
+
+	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
+	for liga, factory in LEAGUE_SERVICE_FACTORIES.items():
+		service = factory()
+		for fixture in service.get_pending_fixtures():
+			sort_date = _parse_fixture_date(str(fixture.get("fecha", "")))
+			if sort_date is None or sort_date < today:
+				continue
+			eligible_fixtures.append((liga, service, fixture, sort_date))
+
+	if not eligible_fixtures:
+		return [], None
+
+	available_dates = sorted({row[3] for row in eligible_fixtures})
+	if selected_date is None or selected_date not in available_dates:
+		selected_date = available_dates[0]
+
+	target_fixtures = [row for row in eligible_fixtures if row[3] == selected_date]
+	return target_fixtures, selected_date
 
 
 def _build_home_rankings() -> dict[str, list[dict[str, object]]]:
@@ -442,8 +813,10 @@ def _build_home_rankings() -> dict[str, list[dict[str, object]]]:
 	rank_over25: list[dict[str, object]] = []
 	rank_under35: list[dict[str, object]] = []
 	rank_btts: list[dict[str, object]] = []
+	rank_corners: list[dict[str, object]] = []
+	rank_total_cards: list[dict[str, object]] = []
 
-	for _, factory in LEAGUE_SERVICE_FACTORIES.items():
+	for league_key, factory in LEAGUE_SERVICE_FACTORIES.items():
 		service = factory()
 		df = service.historical_df
 		total_matches = int(len(df))
@@ -462,8 +835,10 @@ def _build_home_rankings() -> dict[str, list[dict[str, object]]]:
 		under45 = float(((df["FTHG"] + df["FTAG"]) < 5).mean() * 100)
 		btts = float(((df["FTHG"] > 0) & (df["FTAG"] > 0)).mean() * 100)
 		avg_goals = float((df["FTHG"] + df["FTAG"]).mean())
+		avg_corners = float((df["HC"] + df["AC"]).mean())
+		avg_total_cards = float((df["HY"] + df["AY"] + df["HR"] + df["AR"]).mean())
 
-		base = {"league": service.league_name}
+		base = {"league": service.league_name, "key": league_key, "league_logo_url": service.league_logo_url}
 		rank_1x2.append({**base, "value": round(one_x_two_top, 2)})
 		rank_over15.append({**base, "value": round(over15, 2)})
 		rank_over25.append({**base, "value": round(over25, 2)})
@@ -471,6 +846,8 @@ def _build_home_rankings() -> dict[str, list[dict[str, object]]]:
 		rank_under45.append({**base, "value": round(under45, 2)})
 		rank_btts.append({**base, "value": round(btts, 2)})
 		rank_avg_goals.append({**base, "value": round(avg_goals, 2)})
+		rank_corners.append({**base, "value": round(avg_corners, 2)})
+		rank_total_cards.append({**base, "value": round(avg_total_cards, 2)})
 
 	return {
 		"top_1x2": sorted(rank_1x2, key=lambda item: float(item["value"]), reverse=True),
@@ -480,61 +857,49 @@ def _build_home_rankings() -> dict[str, list[dict[str, object]]]:
 		"top_over25": sorted(rank_over25, key=lambda item: float(item["value"]), reverse=True),
 		"top_under35": sorted(rank_under35, key=lambda item: float(item["value"]), reverse=True),
 		"top_btts": sorted(rank_btts, key=lambda item: float(item["value"]), reverse=True),
+		"top_corners": sorted(rank_corners, key=lambda item: float(item["value"]), reverse=True),
+		"top_total_cards": sorted(rank_total_cards, key=lambda item: float(item["value"]), reverse=True),
 	}
 
 
 def dashboard(request):
 	liga = request.GET.get("liga") or request.POST.get("liga", "spain")
-	if liga not in ("spain", "bundesliga", "premier", "seriea", "ligue1", "primeiraliga", "proleague", "eredivisie"):
+	if liga not in VALID_LEAGUES:
 		liga = "spain"
 
 	refresh_status = ""
-	if request.method == "GET":
+	refresh_enabled = request.GET.get("refresh") == "1"
+	if request.method == "GET" and refresh_enabled:
 		try:
 			updated_rows = refresh_fixture_links(liga)
 			refresh_status = f"Enlaces actualizados y guardados en base de datos: {updated_rows} encuentros."
 		except Exception as exc:
 			refresh_status = f"No se pudo refrescar enlaces en este acceso: {exc}"
+	elif request.method == "GET":
+		refresh_status = "Modo rapido: sin refresco automatico. Usa ?refresh=1 para actualizar enlaces."
 
 	service = _get_service(liga)
 	league_stats = _build_league_stats(service)
-	best_bets_snapshot = _best_bets_snapshot(max_items=8)
+	selected_team = request.GET.get("team", "")
+	team_stats = _build_team_detail(service, selected_team)
 	multileague_home = _build_multileague_home(request.GET.get("home_date"))
 	home_rankings = _build_home_rankings()
 	fixtures = service.get_pending_fixtures()
 	selected_match_key = request.POST.get("match_key") or request.GET.get("match_key", "")
-	sportsbook_rows: list[dict[str, object]] = []
-	for fixture in fixtures[:8]:
-		try:
-			match_prediction = service.predict_match(str(fixture.get("match_key", "")))
-			totals_market = match_prediction.get("markets", {}).get("totales", {})
-			over_1_5 = float(totals_market.get("over_1_5", 0.0))
-			under_3_5 = float(totals_market.get("under_3_5", 0.0))
-			under_4_5 = float(totals_market.get("under_4_5", 0.0))
-			sportsbook_rows.append(
-				{
-					"local": fixture.get("local", ""),
-					"visitante": fixture.get("visitante", ""),
-					"hora": fixture.get("hora", ""),
-					"odd_over_1_5": _fair_odds(over_1_5),
-					"odd_under_3_5": _fair_odds(under_3_5),
-					"odd_under_4_5": _fair_odds(under_4_5),
-				}
-			)
-		except Exception:
-			continue
+	sportsbook_rows = _build_sportsbook_rows(service, fixtures, limit=8)
 
 	prediction = None
 	error_message = ""
-	if fixtures:
-		if not selected_match_key:
-			selected_match_key = fixtures[0]["match_key"]
+	if fixtures and selected_match_key:
 		try:
 			prediction = service.predict_match(selected_match_key)
 		except ValueError as exc:
 			error_message = str(exc)
-	else:
+	elif not fixtures:
 		error_message = "No hay encuentros pendientes en el calendario actual."
+
+	selected_fixture = next((fixture for fixture in fixtures if str(fixture.get("match_key", "")) == str(selected_match_key)), None)
+	full_prediction_rows = _build_full_prediction_rows(prediction)
 
 	context = {
 		"liga": liga,
@@ -543,6 +908,8 @@ def dashboard(request):
 		"datasets": service.dataset_labels,
 		"fixtures": fixtures,
 		"prediction": prediction,
+		"selected_fixture": selected_fixture,
+		"full_prediction_rows": full_prediction_rows,
 		"selected_match_key": selected_match_key,
 		"model_name": service.best_model_name,
 		"validation_accuracy": round(service.validation_accuracy * 100, 2),
@@ -553,8 +920,9 @@ def dashboard(request):
 		"error_message": error_message,
 		"refresh_status": refresh_status,
 		"league_stats": league_stats,
+		"team_stats": team_stats,
+		"selected_team": selected_team,
 		"sportsbook_rows": sportsbook_rows,
-		"best_bets_snapshot": best_bets_snapshot,
 		"multileague_home": multileague_home,
 		"home_rankings": home_rankings,
 	}
@@ -567,6 +935,119 @@ def dashboard(request):
 		{"label": "Umbral tarjetas", "value": service.market_min_prob.get("Tarjetas totales", service.no_bet_min_prob)},
 	]
 	return render(request, "predictor/home_dashboard.html", context)
+
+
+def league_dashboard(request, liga: str):
+	if liga not in VALID_LEAGUES:
+		liga = "spain"
+
+	refresh_status = ""
+	refresh_enabled = request.GET.get("refresh") == "1"
+	if request.method == "GET" and refresh_enabled:
+		try:
+			updated_rows = refresh_fixture_links(liga)
+			refresh_status = f"Enlaces actualizados: {updated_rows} encuentros."
+		except Exception as exc:
+			refresh_status = f"No se pudo refrescar la liga: {exc}"
+	elif request.method == "GET":
+		refresh_status = "Modo rapido: sin refresco automatico. Usa ?refresh=1 para actualizar enlaces."
+
+	service = _get_service(liga)
+	league_stats = _build_league_stats(service)
+	selected_team = request.GET.get("team", "")
+	team_stats = _build_team_detail(service, selected_team)
+	fixtures = service.get_pending_fixtures()
+	selected_match_key = request.POST.get("match_key") or request.GET.get("match_key", "")
+	predict_enabled = bool(selected_match_key) or request.GET.get("predict") == "1"
+	sportsbook_rows = _build_sportsbook_rows(service, fixtures, limit=8) if predict_enabled else []
+
+	prediction = None
+	error_message = ""
+	if fixtures and selected_match_key and predict_enabled:
+		try:
+			prediction = service.predict_match(selected_match_key)
+		except ValueError as exc:
+			error_message = str(exc)
+	elif not fixtures:
+		error_message = "No hay encuentros pendientes en el calendario actual."
+
+	context = {
+		"liga": liga,
+		"league_name": service.league_name,
+		"league_logo_url": service.league_logo_url,
+		"league_stats": league_stats,
+		"team_stats": team_stats,
+		"selected_team": selected_team,
+		"fixtures": fixtures,
+		"selected_match_key": selected_match_key,
+		"prediction": prediction,
+		"sportsbook_rows": sportsbook_rows,
+		"refresh_status": refresh_status,
+		"error_message": error_message,
+	}
+	return render(request, "predictor/league_dashboard.html", context)
+
+
+def match_prediction_page(request):
+	liga = request.GET.get("liga") or request.POST.get("liga", "spain")
+	if liga not in VALID_LEAGUES:
+		liga = "spain"
+
+	selected_match_key = request.POST.get("match_key") or request.GET.get("match_key", "")
+	predict_enabled = request.GET.get("predict") == "1"
+	fixtures: list[dict[str, object]] = []
+	service = None
+	league_name = LEAGUE_NAMES.get(liga, liga)
+	league_logo_url = ""
+
+	prediction = None
+	error_message = ""
+	if selected_match_key and not predict_enabled:
+		error_message = "Modo rapido activo: abre el cálculo completo con el botón de pronóstico."
+
+	if predict_enabled:
+		service = _get_service(liga)
+		league_name = service.league_name
+		league_logo_url = service.league_logo_url
+		fixtures = service.get_pending_fixtures()
+		if fixtures and selected_match_key:
+			try:
+				prediction = service.predict_match(selected_match_key)
+			except ValueError as exc:
+				error_message = str(exc)
+		elif not fixtures:
+			error_message = "No hay encuentros pendientes en el calendario actual."
+		else:
+			error_message = "Selecciona un encuentro para ver el pronóstico completo."
+
+	selected_fixture = next((fixture for fixture in fixtures if str(fixture.get("match_key", "")) == str(selected_match_key)), None)
+	if selected_fixture is None and selected_match_key:
+		parts = str(selected_match_key).split("|")
+		if len(parts) >= 4:
+			selected_fixture = {
+				"fecha": parts[0],
+				"hora": parts[1],
+				"local": parts[2],
+				"visitante": parts[3],
+				"local_logo": "",
+				"visitante_logo": "",
+			}
+	full_prediction_rows = _build_full_prediction_rows(prediction)
+
+	context = {
+		"liga": liga,
+		"league_name": league_name,
+		"league_logo_url": league_logo_url,
+		"fixtures": fixtures,
+		"selected_match_key": selected_match_key,
+		"selected_fixture": selected_fixture,
+		"prediction": prediction,
+		"full_prediction_rows": full_prediction_rows,
+		"error_message": error_message,
+		"predict_enabled": predict_enabled,
+		"home_date": str(request.GET.get("home_date", "")).strip(),
+	}
+	return render(request, "predictor/match_prediction.html", context)
 
 
 def best_bets_by_date(request):
@@ -704,27 +1185,9 @@ def best_bets_by_date(request):
 def best_bets_pdf(request):
 	"""Generar PDF de mejores apuestas por fecha."""
 	best_entries: list[dict[str, object]] = []
-	today = datetime.now().date()
-	window_start = None
-	window_end = None
-
-	# Recolectar todos los encuentros pendientes para determinar la proxima fecha.
-	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
-	for liga, factory in LEAGUE_SERVICE_FACTORIES.items():
-		service = factory()
-		for fixture in service.get_pending_fixtures():
-			date_label = str(fixture["fecha"])
-			sort_date = _parse_fixture_date(date_label)
-			if sort_date is None or sort_date < today:
-				continue
-			eligible_fixtures.append((liga, service, fixture, sort_date))
-
-	if not eligible_fixtures:
+	window_fixtures, target_date = _get_pdf_target_fixtures(request)
+	if not window_fixtures or target_date is None:
 		return HttpResponse("No hay encuentros pendientes.", content_type="text/plain")
-
-	window_start = min(row[3] for row in eligible_fixtures)
-	window_end = window_start + timedelta(days=1)
-	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
 
 	# Calcular recomendaciones con el mismo pipeline del dashboard para evitar diferencias.
 	for liga, service, fixture, sort_date in window_fixtures:
@@ -857,11 +1320,11 @@ def best_bets_pdf(request):
 	)
 
 	# Calcular etiqueta de ventana
-	window_label = f"{window_start.strftime('%d/%m/%Y')} al {window_end.strftime('%d/%m/%Y')}"
+	window_label = target_date.strftime('%d/%m/%Y')
 
 	# Título principal
 	story.append(Paragraph("MEJORES APUESTAS POR FECHA", title_style))
-	story.append(Paragraph(f"Ventana: {window_label}", subtitle_style))
+	story.append(Paragraph(f"Fecha seleccionada: {window_label}", subtitle_style))
 	story.append(Spacer(1, 0.15*inch))
 
 	# Agrupar por fecha
@@ -1040,30 +1503,16 @@ def best_bets_pdf(request):
 	buffer.seek(0)
 
 	response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
-	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_{window_start.strftime("%d_%m_%Y")}.pdf"'
+	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_{target_date.strftime("%d_%m_%Y")}.pdf"'
 	return response
 
 
 def best_bets_1x2_pdf(request):
 	"""Generar PDF de mejores apuestas 1X2 por fecha."""
 	entries: list[dict[str, object]] = []
-	today = datetime.now().date()
-
-	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
-	for liga, factory in LEAGUE_SERVICE_FACTORIES.items():
-		service = factory()
-		for fixture in service.get_pending_fixtures():
-			sort_date = _parse_fixture_date(str(fixture["fecha"]))
-			if sort_date is None or sort_date < today:
-				continue
-			eligible_fixtures.append((liga, service, fixture, sort_date))
-
-	if not eligible_fixtures:
+	window_fixtures, target_date = _get_pdf_target_fixtures(request)
+	if not window_fixtures or target_date is None:
 		return HttpResponse("No hay encuentros pendientes.", content_type="text/plain")
-
-	window_start = min(row[3] for row in eligible_fixtures)
-	window_end = window_start + timedelta(days=1)
-	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
 
 	for _liga, service, fixture, sort_date in window_fixtures:
 		try:
@@ -1103,9 +1552,9 @@ def best_bets_1x2_pdf(request):
 	header_style = ParagraphStyle("Header1X2", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=11, textColor=colors.white, spaceAfter=6, spaceBefore=10)
 	row_style = ParagraphStyle("Row1X2", parent=styles["Normal"], fontName="Helvetica", fontSize=9, leading=11)
 
-	window_label = f"{window_start.strftime('%d/%m/%Y')} al {window_end.strftime('%d/%m/%Y')}"
+	window_label = target_date.strftime('%d/%m/%Y')
 	story.append(Paragraph("MEJORES APUESTAS 1X2 POR FECHA", title_style))
-	story.append(Paragraph(f"Ventana: {window_label}", subtitle_style))
+	story.append(Paragraph(f"Fecha seleccionada: {window_label}", subtitle_style))
 
 	grouped: dict[str, list[dict[str, object]]] = {}
 	for item in entries:
@@ -1150,30 +1599,16 @@ def best_bets_1x2_pdf(request):
 	doc.build(story)
 	buffer.seek(0)
 	response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
-	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_1x2_{window_start.strftime("%d_%m_%Y")}.pdf"'
+	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_1x2_{target_date.strftime("%d_%m_%Y")}.pdf"'
 	return response
 
 
 def best_bets_double_chance_pdf(request):
 	"""Generar PDF de mejores apuestas Doble Oportunidad por fecha."""
 	entries: list[dict[str, object]] = []
-	today = datetime.now().date()
-
-	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
-	for liga, factory in LEAGUE_SERVICE_FACTORIES.items():
-		service = factory()
-		for fixture in service.get_pending_fixtures():
-			sort_date = _parse_fixture_date(str(fixture["fecha"]))
-			if sort_date is None or sort_date < today:
-				continue
-			eligible_fixtures.append((liga, service, fixture, sort_date))
-
-	if not eligible_fixtures:
+	window_fixtures, target_date = _get_pdf_target_fixtures(request)
+	if not window_fixtures or target_date is None:
 		return HttpResponse("No hay encuentros pendientes.", content_type="text/plain")
-
-	window_start = min(row[3] for row in eligible_fixtures)
-	window_end = window_start + timedelta(days=1)
-	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
 
 	for _liga, service, fixture, sort_date in window_fixtures:
 		try:
@@ -1212,9 +1647,9 @@ def best_bets_double_chance_pdf(request):
 	subtitle_style = ParagraphStyle("SubDC", parent=styles["Normal"], fontName="Helvetica", fontSize=10, textColor=colors.HexColor("#1a7d5c"), alignment=1, spaceAfter=16)
 	header_style = ParagraphStyle("HeaderDC", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=11, textColor=colors.white, spaceAfter=6, spaceBefore=10)
 
-	window_label = f"{window_start.strftime('%d/%m/%Y')} al {window_end.strftime('%d/%m/%Y')}"
+	window_label = target_date.strftime('%d/%m/%Y')
 	story.append(Paragraph("MEJORES APUESTAS DOBLE OPORTUNIDAD", title_style))
-	story.append(Paragraph(f"Ventana: {window_label}", subtitle_style))
+	story.append(Paragraph(f"Fecha seleccionada: {window_label}", subtitle_style))
 
 	grouped: dict[str, list[dict[str, object]]] = {}
 	for item in entries:
@@ -1259,30 +1694,16 @@ def best_bets_double_chance_pdf(request):
 	doc.build(story)
 	buffer.seek(0)
 	response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
-	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_doble_oportunidad_{window_start.strftime("%d_%m_%Y")}.pdf"'
+	response["Content-Disposition"] = f'attachment; filename="mejores_apuestas_doble_oportunidad_{target_date.strftime("%d_%m_%Y")}.pdf"'
 	return response
 
 
 def best_bets_totals_pdf(request):
 	"""Generar PDF de mercados Totales (Over 1.5/2.5 y Under 3.5/4.5) por fecha."""
 	entries: list[dict[str, object]] = []
-	today = datetime.now().date()
-
-	eligible_fixtures: list[tuple[str, object, dict[str, object], object]] = []
-	for liga, factory in LEAGUE_SERVICE_FACTORIES.items():
-		service = factory()
-		for fixture in service.get_pending_fixtures():
-			sort_date = _parse_fixture_date(str(fixture["fecha"]))
-			if sort_date is None or sort_date < today:
-				continue
-			eligible_fixtures.append((liga, service, fixture, sort_date))
-
-	if not eligible_fixtures:
+	window_fixtures, target_date = _get_pdf_target_fixtures(request)
+	if not window_fixtures or target_date is None:
 		return HttpResponse("No hay encuentros pendientes.", content_type="text/plain")
-
-	window_start = min(row[3] for row in eligible_fixtures)
-	window_end = window_start + timedelta(days=1)
-	window_fixtures = [row for row in eligible_fixtures if window_start <= row[3] <= window_end]
 
 	for _liga, service, fixture, sort_date in window_fixtures:
 		try:
@@ -1330,14 +1751,22 @@ def best_bets_totals_pdf(request):
 	title_style = ParagraphStyle("TitleTotals", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=20, textColor=colors.HexColor("#0f3d28"), alignment=1, spaceAfter=6)
 	subtitle_style = ParagraphStyle("SubTotals", parent=styles["Normal"], fontName="Helvetica", fontSize=10, textColor=colors.HexColor("#1a7d5c"), alignment=1, spaceAfter=14)
 	header_style = ParagraphStyle("HeaderTotals", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=10, textColor=colors.white, spaceAfter=6, spaceBefore=8)
+	market_header_style = ParagraphStyle("MarketHeaderTotals", parent=styles["Heading3"], fontName="Helvetica-Bold", fontSize=9, textColor=colors.white, spaceAfter=4, spaceBefore=6)
 
-	window_label = f"{window_start.strftime('%d/%m/%Y')} al {window_end.strftime('%d/%m/%Y')}"
+	window_label = target_date.strftime('%d/%m/%Y')
 	story.append(Paragraph("REPORTE TOTALES: O1.5, O2.5, U3.5, U4.5", title_style))
-	story.append(Paragraph(f"Ventana: {window_label}", subtitle_style))
+	story.append(Paragraph(f"Fecha seleccionada: {window_label}", subtitle_style))
 
 	grouped: dict[str, list[dict[str, object]]] = {}
 	for item in entries:
 		grouped.setdefault(str(item["date_label"]), []).append(item)
+
+	market_sections = [
+		("over_1_5", "INFORME SEPARADO: OVER 1.5"),
+		("over_2_5", "INFORME SEPARADO: OVER 2.5"),
+		("under_3_5", "INFORME SEPARADO: UNDER 3.5"),
+		("under_4_5", "INFORME SEPARADO: UNDER 4.5"),
+	]
 
 	for date_label in sorted(grouped.keys()):
 		head = Table([[Paragraph(f"FECHA: {date_label}", header_style)]], colWidths=[7.7*inch])
@@ -1350,35 +1779,55 @@ def best_bets_totals_pdf(request):
 		story.append(head)
 		story.append(Spacer(1, 0.08*inch))
 
-		rows = [["#", "Encuentro", "Liga", "O1.5", "O2.5", "U3.5", "U4.5", "Mejor pick"]]
-		for idx, item in enumerate(grouped[date_label], 1):
-			rows.append([
-				str(idx),
-				f"{item['home_team']} vs {item['away_team']} ({item['kickoff']})",
-				str(item["league_name"]),
-				f"{float(item['over_1_5']):.2f}%".replace(".", ","),
-				f"{float(item['over_2_5']):.2f}%".replace(".", ","),
-				f"{float(item['under_3_5']):.2f}%".replace(".", ","),
-				f"{float(item['under_4_5']):.2f}%".replace(".", ","),
-				f"{item['best_pick']} ({float(item['best_prob']):.2f}%)".replace(".", ","),
-			])
+		date_items = list(grouped[date_label])
+		for market_key, market_title in market_sections:
+			market_head = Table([[Paragraph(market_title, market_header_style)]], colWidths=[7.7*inch])
+			market_head.setStyle(TableStyle([
+				("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#145433")),
+				("LEFTPADDING", (0, 0), (-1, -1), 10),
+				("TOPPADDING", (0, 0), (-1, -1), 6),
+				("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+			]))
+			story.append(market_head)
+			story.append(Spacer(1, 0.05*inch))
 
-		table = Table(rows, colWidths=[0.35*inch, 2.15*inch, 1.05*inch, 0.58*inch, 0.58*inch, 0.58*inch, 0.58*inch, 1.73*inch])
-		table.setStyle(TableStyle([
-			("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8f5f0")),
-			("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f3d28")),
-			("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-			("FONTSIZE", (0, 0), (-1, -1), 7.5),
-			("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#a7d7c4")),
-			("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-			("LEFTPADDING", (0, 0), (-1, -1), 4),
-			("RIGHTPADDING", (0, 0), (-1, -1), 4),
-		]))
-		story.append(table)
-		story.append(Spacer(1, 0.15*inch))
+			market_items = sorted(
+				date_items,
+				key=lambda row: (
+					-float(row.get(market_key, 0.0)),
+					str(row.get("kickoff", "")),
+				),
+			)
+
+			rows = [["#", "Encuentro", "Liga", "Prob.", "Cuota justa"]]
+			for idx, item in enumerate(market_items, 1):
+				probability = float(item.get(market_key, 0.0))
+				rows.append([
+					str(idx),
+					f"{item['home_team']} vs {item['away_team']} ({item['kickoff']})",
+					str(item["league_name"]),
+					f"{probability:.2f}%".replace(".", ","),
+					f"{_fair_odds(probability):.2f}".replace(".", ","),
+				])
+
+			table = Table(rows, colWidths=[0.35*inch, 3.55*inch, 1.55*inch, 0.95*inch, 1.3*inch])
+			table.setStyle(TableStyle([
+				("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8f5f0")),
+				("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f3d28")),
+				("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+				("FONTSIZE", (0, 0), (-1, -1), 7.5),
+				("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#a7d7c4")),
+				("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+				("LEFTPADDING", (0, 0), (-1, -1), 4),
+				("RIGHTPADDING", (0, 0), (-1, -1), 4),
+			]))
+			story.append(table)
+			story.append(Spacer(1, 0.11*inch))
+
+		story.append(Spacer(1, 0.08*inch))
 
 	doc.build(story)
 	buffer.seek(0)
 	response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
-	response["Content-Disposition"] = f'attachment; filename="reporte_totales_{window_start.strftime("%d_%m_%Y")}.pdf"'
+	response["Content-Disposition"] = f'attachment; filename="reporte_totales_{target_date.strftime("%d_%m_%Y")}.pdf"'
 	return response

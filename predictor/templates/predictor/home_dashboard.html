@@ -108,6 +108,51 @@
             margin-bottom: 14px;
         }
 
+        .report-downloads {
+            margin-top: 12px;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .report-downloads h4 {
+            margin: 0 0 8px;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #f6cf55;
+            font-size: 0.98rem;
+        }
+
+        .report-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .report-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.22);
+            padding: 7px 10px;
+            text-decoration: none;
+            color: #e8f5ee;
+            font-size: 0.79rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            background: rgba(0,0,0,0.14);
+            text-transform: uppercase;
+        }
+
+        .report-link:hover {
+            border-color: rgba(246, 207, 85, 0.45);
+            background: rgba(246, 207, 85, 0.15);
+            color: #ffe58f;
+        }
+
         .hero h2 {
             margin: 0;
             font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
@@ -229,11 +274,243 @@
             gap: 12px;
         }
 
+        .prediction-full {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .prediction-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .prediction-head h3 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #f6cf55;
+            font-size: 1.12rem;
+        }
+
+        .prediction-match {
+            color: #e8f4ee;
+            font-weight: 700;
+            font-size: 0.92rem;
+        }
+
         .rank-card {
             background: var(--panel);
             border: 1px solid var(--line);
             border-radius: 14px;
             padding: 12px;
+        }
+
+        .league-link {
+            color: inherit;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .league-link:hover {
+            color: #ffe58f;
+        }
+
+        .league-detail {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            margin-top: 14px;
+        }
+
+        .league-detail-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .league-detail-head img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+
+        .league-detail-head h3 {
+            margin: 0;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #f6cf55;
+            font-size: 1.2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .stat-box {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--panel-soft);
+            padding: 10px;
+        }
+
+        .stat-box span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-box strong {
+            display: block;
+            margin-top: 4px;
+            color: #f5fbf7;
+            font-size: 1.05rem;
+        }
+
+        .detail-columns {
+            display: grid;
+            grid-template-columns: 0.8fr 1.2fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .info-list {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .info-list li {
+            margin: 8px 0;
+            color: #d8ebe0;
+        }
+
+        .leaders-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .leader-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--panel-soft);
+            padding: 10px;
+        }
+
+        .leader-card h4 {
+            margin: 0 0 8px;
+            color: #f6cf55;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.95rem;
+        }
+
+        .leader-card ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .leader-card li {
+            margin: 6px 0;
+        }
+
+        .team-link {
+            color: #d9efe3;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .team-link:hover {
+            color: #ffe58f;
+        }
+
+        .entity-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .entity-logo {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            padding: 2px;
+            flex: 0 0 auto;
+        }
+
+        .entity-logo.lg {
+            width: 26px;
+            height: 26px;
+            padding: 3px;
+        }
+
+        .team-detail {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            margin-top: 14px;
+        }
+
+        .team-detail h3 {
+            margin: 0 0 12px;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #f6cf55;
+            font-size: 1.2rem;
+        }
+
+        .team-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .team-split-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .split-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--panel-soft);
+            padding: 10px;
+        }
+
+        .split-card h4 {
+            margin: 0 0 8px;
+            color: #f6cf55;
+            font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.95rem;
         }
 
         .rank-card h4 {
@@ -276,6 +553,44 @@
             color: #f6cf55;
         }
 
+        .form-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 26px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            letter-spacing: 0.04em;
+            border: 1px solid transparent;
+        }
+
+        .form-badge.win {
+            background: rgba(82, 216, 142, 0.2);
+            border-color: rgba(82, 216, 142, 0.6);
+            color: #aef4ca;
+        }
+
+        .form-badge.draw {
+            background: rgba(246, 207, 85, 0.18);
+            border-color: rgba(246, 207, 85, 0.6);
+            color: #ffe7a2;
+        }
+
+        .form-badge.loss {
+            background: rgba(242, 113, 113, 0.2);
+            border-color: rgba(242, 113, 113, 0.58);
+            color: #ffc3c3;
+        }
+
+        .form-strip {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
         .footer {
             margin-top: 14px;
             text-align: center;
@@ -289,6 +604,10 @@
             .dashboard-grid { grid-template-columns: 1fr; }
             .agenda-item { grid-template-columns: 58px 1fr; }
             .agenda-pick { text-align: left; grid-column: 2; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .detail-columns { grid-template-columns: 1fr; }
+            .team-detail-grid { grid-template-columns: repeat(2, 1fr); }
+            .team-split-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 600px) {
@@ -305,7 +624,6 @@
                 <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoy PRO">
                 <h1>SistGoy Análisis PRO</h1>
             </div>
-            <a class="btn gold" href="{% url 'best_bets_by_date' %}">Mejores apuestas por fecha</a>
         </header>
 
         <section class="hero">
@@ -315,6 +633,16 @@
                 {% for date_item in multileague_home.date_options %}
                 <a href="?home_date={{ date_item.value }}{% if liga %}&liga={{ liga }}{% endif %}{% if selected_match_key %}&match_key={{ selected_match_key }}{% endif %}" class="chip {% if date_item.is_selected %}active{% endif %}">{{ date_item.label }}</a>
                 {% endfor %}
+            </div>
+
+            <div class="report-downloads">
+                <h4>📊 Descargar reportes por mercado</h4>
+                <div class="report-links">
+                    <a class="report-link" href="{% url 'best_bets_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 General</a>
+                    <a class="report-link" href="{% url 'best_bets_1x2_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 1X2</a>
+                    <a class="report-link" href="{% url 'best_bets_double_chance_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 Doble oportunidad</a>
+                    <a class="report-link" href="{% url 'best_bets_totals_pdf' %}?date={{ multileague_home.selected_date_value }}">📥 Totales</a>
+                </div>
             </div>
         </section>
 
@@ -328,8 +656,17 @@
                 <article class="agenda-item">
                     <div class="agenda-time">{{ item.kickoff }}</div>
                     <div>
-                        <div class="agenda-league">{{ item.league_name }}</div>
-                        <div class="agenda-match">{{ item.home_team }} - {{ item.away_team }}</div>
+                        <div class="agenda-league">
+                            <span class="entity-inline">
+                                {% if item.league_logo_url %}<img class="entity-logo" src="{{ item.league_logo_url }}" alt="{{ item.league_name }}">{% endif %}
+                                {{ item.league_name }}
+                            </span>
+                        </div>
+                        <div class="agenda-match">
+                            <span class="entity-inline">{% if item.home_team_logo %}<img class="entity-logo" src="{{ item.home_team_logo }}" alt="{{ item.home_team }}">{% endif %}{{ item.home_team }}</span>
+                            -
+                            <span class="entity-inline">{% if item.away_team_logo %}<img class="entity-logo" src="{{ item.away_team_logo }}" alt="{{ item.away_team }}">{% endif %}{{ item.away_team }}</span>
+                        </div>
                     </div>
                     <div class="agenda-pick"><a href="{{ item.dashboard_url }}">Ver pronóstico</a></div>
                 </article>
@@ -346,6 +683,49 @@
             </div>
         </section>
 
+        <section class="prediction-full">
+            <div class="prediction-head">
+                <h3>Pronóstico completo del encuentro</h3>
+                {% if selected_fixture %}
+                <div class="prediction-match">
+                    <span class="entity-inline">{% if selected_fixture.local_logo %}<img class="entity-logo" src="{{ selected_fixture.local_logo }}" alt="{{ selected_fixture.local }}">{% endif %}{{ selected_fixture.local }}</span>
+                    vs
+                    <span class="entity-inline">{% if selected_fixture.visitante_logo %}<img class="entity-logo" src="{{ selected_fixture.visitante_logo }}" alt="{{ selected_fixture.visitante }}">{% endif %}{{ selected_fixture.visitante }}</span>
+                    | {{ selected_fixture.fecha }} {{ selected_fixture.hora }}
+                </div>
+                {% endif %}
+            </div>
+
+            {% if prediction and full_prediction_rows %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mercado</th>
+                        <th>Pick</th>
+                        <th class="value">Prob.</th>
+                        <th class="value">Cuota justa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in full_prediction_rows %}
+                    <tr>
+                        <td>{{ row.market }}</td>
+                        <td>{{ row.pick }}</td>
+                        <td class="value">{{ row.probability }}%</td>
+                        <td class="value">{{ row.fair_odd|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="title-row" style="margin-top:10px; margin-bottom:0;">
+                <span class="meta">Marcador estimado: {{ prediction.score_projection.best_score }}</span>
+                <span class="meta">Goles esperados: {{ prediction.score_projection.expected_home }} - {{ prediction.score_projection.expected_away }}</span>
+            </div>
+            {% else %}
+            <p class="agenda-league">Selecciona un encuentro desde Agenda del día para ver todos los pronósticos posibles.</p>
+            {% endif %}
+        </section>
+
         <section class="dashboard-grid">
             <article class="rank-card">
                 <h4>Media goles</h4>
@@ -353,7 +733,7 @@
                     <thead><tr><th>Liga</th><th class="value">Avg</th></tr></thead>
                     <tbody>
                         {% for row in home_rankings.top_avg_goals %}
-                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}</td></tr>
+                        <tr><td><a class="league-link" href="/liga/{{ row.key|default:'' }}/">{% if row.league_logo_url %}<img class="entity-logo" src="{{ row.league_logo_url }}" alt="{{ row.league }}">{% endif %}{{ row.league }}</a></td><td class="value">{{ row.value }}</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -365,7 +745,7 @@
                     <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
                     <tbody>
                         {% for row in home_rankings.top_over15 %}
-                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        <tr><td><a class="league-link" href="/liga/{{ row.key|default:'' }}/">{% if row.league_logo_url %}<img class="entity-logo" src="{{ row.league_logo_url }}" alt="{{ row.league }}">{% endif %}{{ row.league }}</a></td><td class="value">{{ row.value }}%</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -377,7 +757,7 @@
                     <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
                     <tbody>
                         {% for row in home_rankings.top_over25 %}
-                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        <tr><td><a class="league-link" href="/liga/{{ row.key|default:'' }}/">{% if row.league_logo_url %}<img class="entity-logo" src="{{ row.league_logo_url }}" alt="{{ row.league }}">{% endif %}{{ row.league }}</a></td><td class="value">{{ row.value }}%</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -389,7 +769,7 @@
                     <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
                     <tbody>
                         {% for row in home_rankings.top_under35 %}
-                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        <tr><td><a class="league-link" href="/liga/{{ row.key|default:'' }}/">{% if row.league_logo_url %}<img class="entity-logo" src="{{ row.league_logo_url }}" alt="{{ row.league }}">{% endif %}{{ row.league }}</a></td><td class="value">{{ row.value }}%</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -401,7 +781,7 @@
                     <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
                     <tbody>
                         {% for row in home_rankings.top_under45 %}
-                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        <tr><td><a class="league-link" href="/liga/{{ row.key|default:'' }}/">{% if row.league_logo_url %}<img class="entity-logo" src="{{ row.league_logo_url }}" alt="{{ row.league }}">{% endif %}{{ row.league }}</a></td><td class="value">{{ row.value }}%</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -413,11 +793,234 @@
                     <thead><tr><th>Liga</th><th class="value">%</th></tr></thead>
                     <tbody>
                         {% for row in home_rankings.top_btts %}
-                        <tr><td>{{ row.league }}</td><td class="value">{{ row.value }}%</td></tr>
+                        <tr><td><a class="league-link" href="/liga/{{ row.key|default:'' }}/">{% if row.league_logo_url %}<img class="entity-logo" src="{{ row.league_logo_url }}" alt="{{ row.league }}">{% endif %}{{ row.league }}</a></td><td class="value">{{ row.value }}%</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </article>
+
+            <article class="rank-card">
+                <h4>Top corners</h4>
+                <table>
+                    <thead><tr><th>Liga</th><th class="value">Avg</th></tr></thead>
+                    <tbody>
+                        {% for row in home_rankings.top_corners %}
+                        <tr><td><a class="league-link" href="/liga/{{ row.key|default:'' }}/">{% if row.league_logo_url %}<img class="entity-logo" src="{{ row.league_logo_url }}" alt="{{ row.league }}">{% endif %}{{ row.league }}</a></td><td class="value">{{ row.value }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+
+            <article class="rank-card">
+                <h4>Top tarjetas totales</h4>
+                <table>
+                    <thead><tr><th>Liga</th><th class="value">Avg</th></tr></thead>
+                    <tbody>
+                        {% for row in home_rankings.top_total_cards %}
+                        <tr><td><a class="league-link" href="/liga/{{ row.key|default:'' }}/">{% if row.league_logo_url %}<img class="entity-logo" src="{{ row.league_logo_url }}" alt="{{ row.league }}">{% endif %}{{ row.league }}</a></td><td class="value">{{ row.value }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+        </section>
+
+        <section id="league-detail" class="league-detail">
+            <div class="league-detail-head">
+                <img src="{{ league_stats.league_logo_url }}" alt="{{ league_stats.league_name }}">
+                <h3>{{ league_stats.league_name }} | Estadísticas completas</h3>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box"><span>Partidos</span><strong>{{ league_stats.total_matches }}</strong></div>
+                <div class="stat-box"><span>Media goles</span><strong>{{ league_stats.avg_goals }}</strong></div>
+                <div class="stat-box"><span>Media local</span><strong>{{ league_stats.avg_home_goals }}</strong></div>
+                <div class="stat-box"><span>Media visitante</span><strong>{{ league_stats.avg_away_goals }}</strong></div>
+                <div class="stat-box"><span>Tono de mercado</span><strong>{{ league_stats.market_tone }}</strong></div>
+                <div class="stat-box"><span>Over 1.5</span><strong>{{ league_stats.over15_pct }}%</strong></div>
+                <div class="stat-box"><span>Over 2.5</span><strong>{{ league_stats.over25_pct }}%</strong></div>
+                <div class="stat-box"><span>Under 3.5</span><strong>{{ league_stats.under35_pct }}%</strong></div>
+                <div class="stat-box"><span>Under 4.5</span><strong>{{ league_stats.under45_pct }}%</strong></div>
+                <div class="stat-box"><span>Ambos marcan</span><strong>{{ league_stats.btts_pct }}%</strong></div>
+                <div class="stat-box"><span>Local gana</span><strong>{{ league_stats.home_win_pct }}%</strong></div>
+                <div class="stat-box"><span>Empate</span><strong>{{ league_stats.draw_pct }}%</strong></div>
+                <div class="stat-box"><span>Visitante gana</span><strong>{{ league_stats.away_win_pct }}%</strong></div>
+                <div class="stat-box"><span>Corners medios</span><strong>{{ league_stats.avg_corners }}</strong></div>
+                <div class="stat-box"><span>Tarjetas medias</span><strong>{{ league_stats.avg_cards }}</strong></div>
+                <div class="stat-box"><span>Partidos con roja</span><strong>{{ league_stats.red_match_pct }}%</strong></div>
+            </div>
+
+            <div class="detail-columns">
+                <article class="rank-card">
+                    <h4>Recomendaciones de mercado</h4>
+                    <ul class="info-list">
+                        {% for note in league_stats.recommendations %}
+                        <li>{{ note }}</li>
+                        {% endfor %}
+                    </ul>
+                </article>
+
+                <div class="leaders-grid">
+                    <article class="leader-card">
+                        <h4>Mejor ataque</h4>
+                        <ul>
+                            {% for item in league_stats.attack_leaders %}
+                            <li><span class="entity-inline">{% if item.logo %}<img class="entity-logo" src="{{ item.logo }}" alt="{{ item.team }}">{% endif %}<a class="team-link" href="?liga={{ liga }}&team={{ item.team|urlencode }}{% if multileague_home.selected_date_value %}&home_date={{ multileague_home.selected_date_value }}{% endif %}#team-detail">{{ item.team }}</a>: {{ item.value }} GF</span></li>
+                            {% endfor %}
+                        </ul>
+                    </article>
+                    <article class="leader-card">
+                        <h4>Mejor defensa</h4>
+                        <ul>
+                            {% for item in league_stats.defense_leaders %}
+                            <li><span class="entity-inline">{% if item.logo %}<img class="entity-logo" src="{{ item.logo }}" alt="{{ item.team }}">{% endif %}<a class="team-link" href="?liga={{ liga }}&team={{ item.team|urlencode }}{% if multileague_home.selected_date_value %}&home_date={{ multileague_home.selected_date_value }}{% endif %}#team-detail">{{ item.team }}</a>: {{ item.value }} GC</span></li>
+                            {% endfor %}
+                        </ul>
+                    </article>
+                </div>
+            </div>
+
+            <article class="rank-card">
+                <h4>Tabla completa de la liga</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Equipo</th>
+                            <th>PJ</th>
+                            <th>Pts</th>
+                            <th>PPP</th>
+                            <th>GF</th>
+                            <th>GC</th>
+                            <th>DG</th>
+                            <th>Forma</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in league_stats.table_rows %}
+                        <tr>
+                            <td>{{ row.position }}</td>
+                            <td><span class="entity-inline">{% if row.logo %}<img class="entity-logo" src="{{ row.logo }}" alt="{{ row.team }}">{% endif %}<a class="team-link" href="?liga={{ liga }}&team={{ row.team|urlencode }}{% if multileague_home.selected_date_value %}&home_date={{ multileague_home.selected_date_value }}{% endif %}#team-detail">{{ row.team }}</a></span></td>
+                            <td>{{ row.played }}</td>
+                            <td>{{ row.points }}</td>
+                            <td>{{ row.ppp }}</td>
+                            <td>{{ row.gf }}</td>
+                            <td>{{ row.ga }}</td>
+                            <td class="value">{{ row.gd }}</td>
+                            <td>
+                                <span class="form-strip">
+                                    {% for f in row.form %}
+                                        {% if f == 'W' %}
+                                        <span class="form-badge win">W</span>
+                                        {% elif f == 'D' %}
+                                        <span class="form-badge draw">D</span>
+                                        {% elif f == 'L' %}
+                                        <span class="form-badge loss">L</span>
+                                        {% endif %}
+                                    {% empty %}
+                                    <span class="agenda-league">-</span>
+                                    {% endfor %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+        </section>
+
+        <section id="team-detail" class="team-detail">
+            {% if team_stats %}
+            <h3><span class="entity-inline">{% if team_stats.team_logo %}<img class="entity-logo lg" src="{{ team_stats.team_logo }}" alt="{{ team_stats.team }}">{% endif %}{{ team_stats.team }} | Estadísticas completas del equipo</span></h3>
+
+            <div class="team-detail-grid">
+                <div class="stat-box"><span>Posición</span><strong>{{ team_stats.position }}</strong></div>
+                <div class="stat-box"><span>Puntos</span><strong>{{ team_stats.points }}</strong></div>
+                <div class="stat-box"><span>PPP</span><strong>{{ team_stats.ppp }}</strong></div>
+                <div class="stat-box"><span>Partidos</span><strong>{{ team_stats.matches }}</strong></div>
+                <div class="stat-box"><span>Balance</span><strong>{{ team_stats.wins }}-{{ team_stats.draws }}-{{ team_stats.losses }}</strong></div>
+                <div class="stat-box"><span>GF / GC / DG</span><strong>{{ team_stats.gf }} / {{ team_stats.ga }} / {{ team_stats.gd }}</strong></div>
+                <div class="stat-box"><span>Goles a favor prom.</span><strong>{{ team_stats.avg_goals_for }}</strong></div>
+                <div class="stat-box"><span>Goles en contra prom.</span><strong>{{ team_stats.avg_goals_against }}</strong></div>
+                <div class="stat-box"><span>Tiros prom.</span><strong>{{ team_stats.avg_shots }}</strong></div>
+                <div class="stat-box"><span>Tiros a puerta prom.</span><strong>{{ team_stats.avg_shots_on_target }}</strong></div>
+                <div class="stat-box"><span>Corners prom.</span><strong>{{ team_stats.avg_corners }}</strong></div>
+                <div class="stat-box"><span>Amarillas prom.</span><strong>{{ team_stats.avg_yellow_cards }}</strong></div>
+                <div class="stat-box"><span>Rojas prom.</span><strong>{{ team_stats.avg_red_cards }}</strong></div>
+                <div class="stat-box"><span>Clean sheets</span><strong>{{ team_stats.clean_sheet_pct }}%</strong></div>
+                <div class="stat-box"><span>Sin marcar</span><strong>{{ team_stats.failed_to_score_pct }}%</strong></div>
+                <div class="stat-box"><span>BTTS</span><strong>{{ team_stats.btts_pct }}%</strong></div>
+                <div class="stat-box"><span>Over 1.5</span><strong>{{ team_stats.over15_pct }}%</strong></div>
+                <div class="stat-box"><span>Over 2.5</span><strong>{{ team_stats.over25_pct }}%</strong></div>
+                <div class="stat-box"><span>Under 3.5</span><strong>{{ team_stats.under35_pct }}%</strong></div>
+                <div class="stat-box"><span>Under 4.5</span><strong>{{ team_stats.under45_pct }}%</strong></div>
+            </div>
+
+            <div class="team-split-grid">
+                <article class="split-card">
+                    <h4>Rendimiento como local</h4>
+                    <table>
+                        <tbody>
+                            <tr><td>PJ</td><td class="value">{{ team_stats.home.matches }}</td></tr>
+                            <tr><td>Puntos</td><td class="value">{{ team_stats.home.points }}</td></tr>
+                            <tr><td>PPP</td><td class="value">{{ team_stats.home.ppp }}</td></tr>
+                            <tr><td>Balance</td><td class="value">{{ team_stats.home.wins }}-{{ team_stats.home.draws }}-{{ team_stats.home.losses }}</td></tr>
+                            <tr><td>GF / GC</td><td class="value">{{ team_stats.home.gf }} / {{ team_stats.home.ga }}</td></tr>
+                        </tbody>
+                    </table>
+                </article>
+                <article class="split-card">
+                    <h4>Rendimiento como visitante</h4>
+                    <table>
+                        <tbody>
+                            <tr><td>PJ</td><td class="value">{{ team_stats.away.matches }}</td></tr>
+                            <tr><td>Puntos</td><td class="value">{{ team_stats.away.points }}</td></tr>
+                            <tr><td>PPP</td><td class="value">{{ team_stats.away.ppp }}</td></tr>
+                            <tr><td>Balance</td><td class="value">{{ team_stats.away.wins }}-{{ team_stats.away.draws }}-{{ team_stats.away.losses }}</td></tr>
+                            <tr><td>GF / GC</td><td class="value">{{ team_stats.away.gf }} / {{ team_stats.away.ga }}</td></tr>
+                        </tbody>
+                    </table>
+                </article>
+            </div>
+
+            <article class="rank-card">
+                <h4>Últimos partidos</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Sede</th>
+                            <th>Rival</th>
+                            <th>Marcador</th>
+                            <th>Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in team_stats.recent_matches %}
+                        <tr>
+                            <td>{{ item.date }}</td>
+                            <td>{{ item.venue }}</td>
+                            <td><span class="entity-inline">{% if item.opponent_logo %}<img class="entity-logo" src="{{ item.opponent_logo }}" alt="{{ item.opponent }}">{% endif %}{{ item.opponent }}</span></td>
+                            <td>{{ item.score }}</td>
+                            <td class="value">
+                                {% if item.result == 'W' %}
+                                <span class="form-badge win">W</span>
+                                {% elif item.result == 'D' %}
+                                <span class="form-badge draw">D</span>
+                                {% elif item.result == 'L' %}
+                                <span class="form-badge loss">L</span>
+                                {% else %}
+                                <span class="form-badge">{{ item.result }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </article>
+            {% else %}
+            <h3>Ficha completa del equipo</h3>
+            <p class="agenda-league">Haz clic en cualquier equipo dentro de la tabla de liga o en los líderes para ver todas sus estadísticas.</p>
+            {% endif %}
         </section>
 
         <footer class="footer">

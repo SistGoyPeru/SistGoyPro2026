@@ -1,0 +1,150 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pronóstico completo | {{ league_name }}</title>
+    <link rel="icon" type="image/jpeg" href="{% static 'predictor/brand/logo.jpg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-1: #072f20;
+            --bg-2: #0d4a31;
+            --bg-3: #091f15;
+            --panel: rgba(9, 34, 23, 0.9);
+            --line: rgba(188, 225, 200, 0.18);
+            --text: #edf8f1;
+            --muted: #a7c7b7;
+            --accent: #f6cf55;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Source Sans 3", "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 16% 8%, rgba(246, 207, 85, 0.14), transparent 28%),
+                radial-gradient(circle at 84% 10%, rgba(108, 227, 163, 0.13), transparent 24%),
+                linear-gradient(170deg, var(--bg-1), var(--bg-2) 52%, var(--bg-3));
+        }
+        .wrap { width: min(1200px, 100%); margin: 0 auto; padding: 14px; }
+        .top, .panel { border: 1px solid var(--line); border-radius: 14px; }
+        .top {
+            background: linear-gradient(90deg, #016d48, #0b8d5b);
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .brand img { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; }
+        .brand h1 { margin: 0; font-family: "Barlow Condensed", sans-serif; color: #ffe57b; letter-spacing: 0.05em; text-transform: uppercase; }
+        .btn { text-decoration: none; color: #ecf8f1; border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; padding: 8px 10px; font-weight: 700; font-size: 0.8rem; background: rgba(0,0,0,0.16); }
+        .panel { background: var(--panel); padding: 14px; margin-bottom: 14px; }
+        .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .head h2 { margin: 0; font-family: "Barlow Condensed", sans-serif; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
+        .meta { color: var(--muted); font-size: 0.85rem; }
+        .entity-inline { display: inline-flex; align-items: center; gap: 8px; }
+        .entity-logo { width: 20px; height: 20px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,0.08); padding: 2px; }
+        .row { margin: 8px 0 0; }
+        .error { color: #ffd3d3; }
+        table { width: 100%; border-collapse: collapse; border: 1px solid rgba(255,255,255,0.09); }
+        th, td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; font-size: 0.84rem; }
+        th { background: rgba(255,255,255,0.05); color: #cfe6d9; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; }
+        td.value { text-align: right; color: var(--accent); font-weight: 700; }
+        .selector { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+        select, button { border-radius: 10px; border: 1px solid var(--line); padding: 10px; font: inherit; }
+        select { background: rgba(7, 29, 19, 0.82); color: #ebf7f1; }
+        button { background: linear-gradient(135deg, #ffd876, #f6cf55); color: #173728; font-weight: 700; border: none; text-transform: uppercase; }
+        @media (max-width: 760px) { .selector { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header class="top">
+        <div class="brand">
+            <img src="{% static 'predictor/brand/logo.jpg' %}" alt="SistGoy PRO">
+            <h1>Pronóstico completo</h1>
+        </div>
+        <a class="btn" href="/?liga={{ liga }}{% if home_date %}&home_date={{ home_date }}{% endif %}">Volver al dashboard</a>
+    </header>
+
+    <section class="panel">
+        <div class="head">
+            <h2>{{ league_name }}</h2>
+            {% if selected_fixture %}
+            <div class="meta">
+                <span class="entity-inline">{% if selected_fixture.local_logo %}<img class="entity-logo" src="{{ selected_fixture.local_logo }}" alt="{{ selected_fixture.local }}">{% endif %}{{ selected_fixture.local }}</span>
+                vs
+                <span class="entity-inline">{% if selected_fixture.visitante_logo %}<img class="entity-logo" src="{{ selected_fixture.visitante_logo }}" alt="{{ selected_fixture.visitante }}">{% endif %}{{ selected_fixture.visitante }}</span>
+                | {{ selected_fixture.fecha }} {{ selected_fixture.hora }}
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="get" class="selector">
+            <input type="hidden" name="liga" value="{{ liga }}">
+            {% if home_date %}<input type="hidden" name="home_date" value="{{ home_date }}">{% endif %}
+            <input type="hidden" name="predict" value="1">
+            <select name="match_key" required>
+                <option value="">Selecciona encuentro...</option>
+                {% for f in fixtures %}
+                <option value="{{ f.match_key }}" {% if selected_match_key == f.match_key %}selected{% endif %}>{{ f.fecha }} {{ f.hora }} | {{ f.local }} vs {{ f.visitante }}</option>
+                {% endfor %}
+                {% if not fixtures and selected_match_key %}
+                <option value="{{ selected_match_key }}" selected>{{ selected_match_key }}</option>
+                {% endif %}
+            </select>
+            <button type="submit">Ver pronóstico</button>
+        </form>
+
+        {% if error_message %}
+        <p class="row error">{{ error_message }}</p>
+        {% endif %}
+        {% if selected_match_key and not predict_enabled %}
+        <p class="row">
+            <a class="btn" href="?liga={{ liga }}&match_key={{ selected_match_key|urlencode }}{% if home_date %}&home_date={{ home_date }}{% endif %}&predict=1">Calcular pronóstico completo</a>
+        </p>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="head">
+            <h2>Todos los mercados</h2>
+            {% if prediction %}
+            <div class="meta">Marcador estimado: {{ prediction.score_projection.best_score }} | Goles esperados: {{ prediction.score_projection.expected_home }} - {{ prediction.score_projection.expected_away }}</div>
+            {% endif %}
+        </div>
+        {% if prediction and full_prediction_rows %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Mercado</th>
+                    <th>Pick</th>
+                    <th class="value">Prob.</th>
+                    <th class="value">Cuota justa</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in full_prediction_rows %}
+                <tr>
+                    <td>{{ row.market }}</td>
+                    <td>{{ row.pick }}</td>
+                    <td class="value">{{ row.probability }}%</td>
+                    <td class="value">{{ row.fair_odd|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="meta">Selecciona un encuentro para mostrar todos los pronósticos disponibles.</p>
+        {% endif %}
+    </section>
+</div>
+</body>
+</html>
