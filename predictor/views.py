@@ -21,6 +21,9 @@ from .engine import (
 	get_prediction_service_primeiraliga,
 	get_prediction_service_proleague,
 	get_prediction_service_eredivisie,
+	get_prediction_service_superlig_turquia,
+	get_prediction_service_superleague_grecia,
+	get_prediction_service_premiership_escocia,
 )
 from .sync import refresh_fixture_links
 
@@ -34,6 +37,9 @@ LEAGUE_SERVICE_FACTORIES = {
 	"primeiraliga": get_prediction_service_primeiraliga,
 	"proleague": get_prediction_service_proleague,
 	"eredivisie": get_prediction_service_eredivisie,
+	"superlig_turquia": get_prediction_service_superlig_turquia,
+	"superleague_grecia": get_prediction_service_superleague_grecia,
+	"premiership_escocia": get_prediction_service_premiership_escocia,
 }
 
 VALID_LEAGUES = tuple(LEAGUE_SERVICE_FACTORIES.keys())
@@ -47,6 +53,9 @@ LEAGUE_NAMES = {
 	"primeiraliga": "Primeira Liga",
 	"proleague": "Pro League",
 	"eredivisie": "Eredivisie",
+	"superlig_turquia": "Süper Lig",
+	"superleague_grecia": "Super League",
+	"premiership_escocia": "Premiership",
 }
 
 PDF_MIN_PROBABILITY = 80.0

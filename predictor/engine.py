@@ -589,6 +589,215 @@ EREDIVISIE_CONFIG: dict = {
     "league_name":            "Eredivisie Holanda",
 }
 
+# ── Süper Lig Turquía ─────────────────────────────────────────────────────────
+TR_TEAM_COORDS = {
+    "Alanyaspor":           (36.5444, 32.0058),
+    "Antalyaspor":          (36.8824, 30.6956),
+    "Beşiktaş":             (41.0437, 29.0073),
+    "İstanbul Başakşehir":  (41.0830, 28.7981),
+    "Eyüpspor":             (41.0519, 28.9317),
+    "Fenerbahçe":           (40.9997, 29.0416),
+    "Galatasaray":          (41.0731, 28.9900),
+    "Gaziantep FK":         (37.0594, 37.3825),
+    "Gençlerbirliği":       (39.8794, 32.8597),
+    "Göztepe":              (38.4192, 27.1397),
+    "Fatih Karagümrük":     (41.0180, 28.9536),
+    "Kasımpaşa SK":         (41.0608, 28.9519),
+    "Kayserispor":          (38.6931, 35.5031),
+    "Kocaelispor":          (40.7867, 29.9167),
+    "Konyaspor":            (37.8667, 32.5000),
+    "Çaykur Rizespor":      (41.0208, 40.5236),
+    "Samsunspor":           (41.2867, 36.3333),
+    "Trabzonspor":          (40.9975, 39.7425),
+}
+TR_TEAM_API_ALIASES: dict[str, str] = {
+    "İstanbul Başakşehir": "Istanbul Basaksehir",
+    "Beşiktaş":            "Besiktas",
+    "Fenerbahçe":          "Fenerbahce",
+    "Galatasaray":         "Galatasaray",
+    "Gençlerbirliği":      "Genclerbirligi",
+    "Göztepe":             "Goztepe",
+    "Fatih Karagümrük":    "Fatih Karagumruk",
+    "Kasımpaşa SK":        "Kasimpasa",
+    "Çaykur Rizespor":     "Caykur Rizespor",
+    "Eyüpspor":            "Eyupspor",
+}
+TR_TEAM_SCRAPE_ALIASES: dict[str, str] = {
+    "İstanbul Başakşehir": "Basaksehir",
+    "Beşiktaş":            "Besiktas",
+    "Fenerbahçe":          "Fenerbahce",
+    "Gençlerbirliği":      "Genclerbirligi",
+    "Göztepe":             "Goztepe",
+    "Fatih Karagümrük":    "Karagumruk",
+    "Kasımpaşa SK":        "Kasimpasa",
+    "Çaykur Rizespor":     "Rizespor",
+    "Eyüpspor":            "Eyupspor",
+}
+TR_TEAM_TRANSFERMARKT_IDS: dict[str, int] = {
+    "Galatasaray":          141,
+    "Fenerbahçe":           36,
+    "Beşiktaş":             114,
+    "Trabzonspor":          449,
+    "İstanbul Başakşehir":  11965,
+    "Alanyaspor":           26624,
+    "Antalyaspor":          389,
+    "Eyüpspor":             7613,
+    "Göztepe":              680,
+    "Fatih Karagümrük":     635,
+    "Kasımpaşa SK":         7890,
+    "Kayserispor":          2434,
+    "Gençlerbirliği":       2289,
+    "Konyaspor":            1258,
+    "Çaykur Rizespor":      2235,
+    "Samsunspor":           1072,
+    "Gaziantep FK":         6012,
+    "Kocaelispor":          1024,
+}
+TR_APIFOOTBALL_LEAGUE_ID = 203
+SUPERLIG_TURQUIA_CONFIG: dict = {
+    "historical_csv":         BASE_DIR / "superlig_turquia.csv",
+    "fixtures_csv":           BASE_DIR / "superlig_turquia_encuentros.csv",
+    "team_coords":            TR_TEAM_COORDS,
+    "team_api_aliases":       TR_TEAM_API_ALIASES,
+    "team_scrape_aliases":    TR_TEAM_SCRAPE_ALIASES,
+    "team_transfermarkt_ids": TR_TEAM_TRANSFERMARKT_IDS,
+    "apifootball_league_id":  TR_APIFOOTBALL_LEAGUE_ID,
+    "league_name":            "Süper Lig Turquía",
+}
+
+# ── Super League Grecia ───────────────────────────────────────────────────────
+GR_TEAM_COORDS = {
+    "Aris Saloniki":       (40.6236, 22.9655),
+    "Olympiakos Piraeus":  (37.9667, 23.6667),
+    "Panetolikos":         (38.6239, 21.4150),
+    "AEK Athen":           (37.9994, 23.7294),
+    "PAOK Saloniki":       (40.6297, 22.9419),
+    "Levadiakos":          (38.4400, 22.8700),
+    "Volos NFC":           (39.3667, 22.9333),
+    "Panserraikos":        (41.0833, 23.5500),
+    "AE Lárissa":          (39.6361, 22.4194),
+    "Panathinaikos":       (37.9833, 23.7333),
+    "Atromitos":           (38.0000, 23.6833),
+    "Asteras Tripolis":    (37.5094, 22.3764),
+    "AE Kifisias":         (38.0681, 23.8186),
+    "OFI Heraklion":       (35.3297, 25.1331),
+}
+GR_TEAM_API_ALIASES: dict[str, str] = {
+    "Aris Saloniki":      "Aris",
+    "Olympiakos Piraeus": "Olympiakos",
+    "AEK Athen":          "AEK Athens",
+    "PAOK Saloniki":      "PAOK",
+    "Levadiakos":         "Levadeiakos",
+    "AE Lárissa":         "Larissa",
+    "AE Kifisias":        "Kifisia",
+    "OFI Heraklion":      "OFI Crete",
+}
+GR_TEAM_SCRAPE_ALIASES: dict[str, str] = {
+    "Aris Saloniki":      "Aris",
+    "Olympiakos Piraeus": "Olympiakos",
+    "AEK Athen":          "AEK",
+    "PAOK Saloniki":      "PAOK",
+    "Levadiakos":         "Levadeiakos",
+    "AE Lárissa":         "Larissa",
+    "AE Kifisias":        "Kifisia",
+    "OFI Heraklion":      "OFI",
+}
+GR_TEAM_TRANSFERMARKT_IDS: dict[str, int] = {
+    "Olympiakos Piraeus":  2686,
+    "Panathinaikos":       519,
+    "AEK Athen":           269,
+    "PAOK Saloniki":       1067,
+    "Aris Saloniki":       1088,
+    "Asteras Tripolis":    13682,
+    "Atromitos":           5636,
+    "Panetolikos":         14682,
+    "Levadiakos":          17609,
+    "Volos NFC":           45543,
+    "Panserraikos":        11015,
+    "AE Lárissa":          14025,
+    "AE Kifisias":         48462,
+    "OFI Heraklion":       3536,
+}
+GR_APIFOOTBALL_LEAGUE_ID = 197
+SUPERLEAGUE_GRECIA_CONFIG: dict = {
+    "historical_csv":         BASE_DIR / "superleague_grecia.csv",
+    "fixtures_csv":           BASE_DIR / "superleague_grecia_encuentros.csv",
+    "team_coords":            GR_TEAM_COORDS,
+    "team_api_aliases":       GR_TEAM_API_ALIASES,
+    "team_scrape_aliases":    GR_TEAM_SCRAPE_ALIASES,
+    "team_transfermarkt_ids": GR_TEAM_TRANSFERMARKT_IDS,
+    "apifootball_league_id":  GR_APIFOOTBALL_LEAGUE_ID,
+    "league_name":            "Super League Grecia",
+}
+
+# ── Premiership Escocia ───────────────────────────────────────────────────────
+SC_TEAM_COORDS = {
+    "Kilmarnock FC":       (55.6117, -4.4972),
+    "Motherwell FC":       (55.7778, -3.9778),
+    "Falkirk FC":          (56.0000, -3.7833),
+    "Dundee FC":           (56.4667, -2.9667),
+    "Celtic FC":           (55.8500, -4.2000),
+    "Heart of Midlothian": (55.9281, -3.2317),
+    "Livingston FC":       (55.8833, -3.5167),
+    "St. Mirren FC":       (55.8500, -4.4333),
+    "Rangers FC":          (55.8553, -4.3086),
+    "Aberdeen FC":         (57.1561, -2.0972),
+    "Dundee United":       (56.4667, -2.9667),
+    "Hibernian FC":        (55.9617, -3.1644),
+}
+SC_TEAM_API_ALIASES: dict[str, str] = {
+    "Kilmarnock FC":       "Kilmarnock",
+    "Motherwell FC":       "Motherwell",
+    "Falkirk FC":          "Falkirk",
+    "Dundee FC":           "Dundee",
+    "Celtic FC":           "Celtic",
+    "Heart of Midlothian": "Hearts",
+    "Livingston FC":       "Livingston",
+    "St. Mirren FC":       "St Mirren",
+    "Rangers FC":          "Rangers",
+    "Aberdeen FC":         "Aberdeen",
+    "Dundee United":       "Dundee United",
+    "Hibernian FC":        "Hibernian",
+}
+SC_TEAM_SCRAPE_ALIASES: dict[str, str] = {
+    "Kilmarnock FC":       "Kilmarnock",
+    "Motherwell FC":       "Motherwell",
+    "Falkirk FC":          "Falkirk",
+    "Dundee FC":           "Dundee",
+    "Celtic FC":           "Celtic",
+    "Heart of Midlothian": "Hearts",
+    "Livingston FC":       "Livingston",
+    "St. Mirren FC":       "St Mirren",
+    "Rangers FC":          "Rangers",
+    "Aberdeen FC":         "Aberdeen",
+    "Hibernian FC":        "Hibernian",
+}
+SC_TEAM_TRANSFERMARKT_IDS: dict[str, int] = {
+    "Celtic FC":           371,
+    "Rangers FC":          1764,
+    "Heart of Midlothian": 1449,
+    "Hibernian FC":        1450,
+    "Aberdeen FC":         1452,
+    "Motherwell FC":       1451,
+    "Dundee United":       2276,
+    "Kilmarnock FC":       1455,
+    "St. Mirren FC":       1457,
+    "Livingston FC":       2415,
+    "Dundee FC":           1453,
+    "Falkirk FC":          1456,
+}
+SC_APIFOOTBALL_LEAGUE_ID = 179
+PREMIERSHIP_ESCOCIA_CONFIG: dict = {
+    "historical_csv":         BASE_DIR / "premierleague_escocia.csv",
+    "fixtures_csv":           BASE_DIR / "premierleague_escocia_encuentros.csv",
+    "team_coords":            SC_TEAM_COORDS,
+    "team_api_aliases":       SC_TEAM_API_ALIASES,
+    "team_scrape_aliases":    SC_TEAM_SCRAPE_ALIASES,
+    "team_transfermarkt_ids": SC_TEAM_TRANSFERMARKT_IDS,
+    "apifootball_league_id":  SC_APIFOOTBALL_LEAGUE_ID,
+    "league_name":            "Premiership Escocia",
+}
+
 
 def _read_env_value(key: str) -> str:
     if not ENV_FILE.exists():
@@ -3004,6 +3213,21 @@ def get_prediction_service_proleague() -> MatchPredictionService:
 @lru_cache(maxsize=1)
 def get_prediction_service_eredivisie() -> MatchPredictionService:
     return MatchPredictionService(EREDIVISIE_CONFIG)
+
+
+@lru_cache(maxsize=1)
+def get_prediction_service_superlig_turquia() -> MatchPredictionService:
+    return MatchPredictionService(SUPERLIG_TURQUIA_CONFIG)
+
+
+@lru_cache(maxsize=1)
+def get_prediction_service_superleague_grecia() -> MatchPredictionService:
+    return MatchPredictionService(SUPERLEAGUE_GRECIA_CONFIG)
+
+
+@lru_cache(maxsize=1)
+def get_prediction_service_premiership_escocia() -> MatchPredictionService:
+    return MatchPredictionService(PREMIERSHIP_ESCOCIA_CONFIG)
 
 
 # Alias para compatibilidad

@@ -18,6 +18,9 @@ EXTRA_SCRIPTS = [
     "actualizar_csv_primeiraliga.py",
     "actualizar_csv_proleague.py",
     "actualizar_csv_eredivisie.py",
+    "actualizar_csv_superligturquia.py",
+    "actualizar_csv_superleaguegrecia.py",
+    "actualizar_csv_premierleagueescocia.py",
 ]
 
 TEAM_NAME_MAP = {

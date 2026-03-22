@@ -28,6 +28,15 @@ from actualizar_encuentros_proleague import write_csv as proleague_write_csv
 from actualizar_encuentros_eredivisie import download_page as eredivisie_download_page
 from actualizar_encuentros_eredivisie import extract_matches as eredivisie_extract_matches
 from actualizar_encuentros_eredivisie import write_csv as eredivisie_write_csv
+from actualizar_encuentros_superligturquia import download_page as superlig_turquia_download_page
+from actualizar_encuentros_superligturquia import extract_matches as superlig_turquia_extract_matches
+from actualizar_encuentros_superligturquia import write_csv as superlig_turquia_write_csv
+from actualizar_encuentros_superleaguegrecia import download_page as superleague_grecia_download_page
+from actualizar_encuentros_superleaguegrecia import extract_matches as superleague_grecia_extract_matches
+from actualizar_encuentros_superleaguegrecia import write_csv as superleague_grecia_write_csv
+from actualizar_encuentros_premierleagueescocia import download_page as premiership_escocia_download_page
+from actualizar_encuentros_premierleagueescocia import extract_matches as premiership_escocia_extract_matches
+from actualizar_encuentros_premierleagueescocia import write_csv as premiership_escocia_write_csv
 
 from .engine import (
     get_prediction_service_bundesliga,
@@ -38,6 +47,9 @@ from .engine import (
     get_prediction_service_primeiraliga,
     get_prediction_service_proleague,
     get_prediction_service_eredivisie,
+    get_prediction_service_superlig_turquia,
+    get_prediction_service_superleague_grecia,
+    get_prediction_service_premiership_escocia,
 )
 from .models import FixtureLinkCache
 
@@ -54,6 +66,9 @@ LEAGUE_UPDATERS: dict[str, Updater] = {
     "primeiraliga": (primeiraliga_download_page, primeiraliga_extract_matches, primeiraliga_write_csv),
     "proleague": (proleague_download_page, proleague_extract_matches, proleague_write_csv),
     "eredivisie": (eredivisie_download_page, eredivisie_extract_matches, eredivisie_write_csv),
+    "superlig_turquia": (superlig_turquia_download_page, superlig_turquia_extract_matches, superlig_turquia_write_csv),
+    "superleague_grecia": (superleague_grecia_download_page, superleague_grecia_extract_matches, superleague_grecia_write_csv),
+    "premiership_escocia": (premiership_escocia_download_page, premiership_escocia_extract_matches, premiership_escocia_write_csv),
 }
 
 
@@ -72,6 +87,12 @@ def clear_service_cache(liga: str) -> None:
         get_prediction_service_proleague.cache_clear()
     elif liga == "eredivisie":
         get_prediction_service_eredivisie.cache_clear()
+    elif liga == "superlig_turquia":
+        get_prediction_service_superlig_turquia.cache_clear()
+    elif liga == "superleague_grecia":
+        get_prediction_service_superleague_grecia.cache_clear()
+    elif liga == "premiership_escocia":
+        get_prediction_service_premiership_escocia.cache_clear()
     else:
         get_prediction_service_spain.cache_clear()
 
