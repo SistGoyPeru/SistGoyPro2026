@@ -58,6 +58,31 @@ LEAGUE_NAMES = {
 	"premiership_escocia": "Premiership",
 }
 
+LEAGUE_LOGO_URLS = {
+	"spain": "https://media.api-sports.io/football/leagues/140.png",
+	"bundesliga": "https://media.api-sports.io/football/leagues/78.png",
+	"premier": "https://media.api-sports.io/football/leagues/39.png",
+	"seriea": "https://media.api-sports.io/football/leagues/135.png",
+	"ligue1": "https://media.api-sports.io/football/leagues/61.png",
+	"primeiraliga": "https://media.api-sports.io/football/leagues/94.png",
+	"proleague": "https://media.api-sports.io/football/leagues/144.png",
+	"eredivisie": "https://media.api-sports.io/football/leagues/88.png",
+	"superlig_turquia": "https://media.api-sports.io/football/leagues/203.png",
+	"superleague_grecia": "https://media.api-sports.io/football/leagues/197.png",
+	"premiership_escocia": "https://media.api-sports.io/football/leagues/179.png",
+}
+
+
+def _build_league_tabs() -> list[dict[str, str]]:
+	return [
+		{
+			"key": liga_key,
+			"name": LEAGUE_NAMES.get(liga_key, liga_key),
+			"logo_url": LEAGUE_LOGO_URLS.get(liga_key, ""),
+		}
+		for liga_key in VALID_LEAGUES
+	]
+
 PDF_MIN_PROBABILITY = 80.0
 
 
@@ -943,6 +968,7 @@ def dashboard(request):
 
 	context = {
 		"liga": liga,
+		"league_tabs": _build_league_tabs(),
 		"league_name": service.league_name,
 		"league_logo_url": service.league_logo_url,
 		"datasets": service.dataset_labels,
@@ -1013,6 +1039,7 @@ def league_dashboard(request, liga: str):
 
 	context = {
 		"liga": liga,
+		"league_tabs": _build_league_tabs(),
 		"league_name": service.league_name,
 		"league_logo_url": service.league_logo_url,
 		"league_stats": league_stats,
@@ -1076,6 +1103,7 @@ def match_prediction_page(request):
 
 	context = {
 		"liga": liga,
+		"league_tabs": _build_league_tabs(),
 		"league_name": league_name,
 		"league_logo_url": league_logo_url,
 		"fixtures": fixtures,
@@ -1633,7 +1661,7 @@ def best_bets_1x2_pdf(request):
 
 	for _liga, service, fixture, sort_date in window_fixtures:
 		try:
-			prediction = service.predict_match(fixture["match_key"])
+			prediction = service.predict_match(fixture["match_key"], quick_context=True)
 		except ValueError:
 			continue
 
@@ -1731,8 +1759,10 @@ def best_bets_double_chance_pdf(request):
 
 	for _liga, service, fixture, sort_date in window_fixtures:
 		try:
-			prediction = service.predict_match(fixture["match_key"])
+			prediction = service.predict_match(fixture["match_key"], quick_context=True)
 		except ValueError:
+			continue
+		except Exception:
 			continue
 
 		pick_dc = prediction.get("categorized_bets", {}).get("doble_oportunidad", {})
@@ -1982,8 +2012,10 @@ def best_bets_summary_pdf(request):
 
 	for _liga, service, fixture, sort_date in window_fixtures:
 		try:
-			prediction = service.predict_match(fixture["match_key"])
+			prediction = service.predict_match(fixture["match_key"], quick_context=True)
 		except ValueError:
+			continue
+		except Exception:
 			continue
 
 		markets = prediction.get("markets", {})

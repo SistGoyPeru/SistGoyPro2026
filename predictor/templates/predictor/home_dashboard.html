@@ -174,6 +174,44 @@
             margin-top: 10px;
         }
 
+        .league-switcher {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .league-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.18);
+            color: #d6eadf;
+            text-decoration: none;
+            background: rgba(255,255,255,0.03);
+            padding: 6px 10px;
+            font-size: 0.77rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 700;
+        }
+
+        .league-pill img {
+            width: 15px;
+            height: 15px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.07);
+            padding: 1px;
+        }
+
+        .league-pill.active {
+            border-color: rgba(246, 207, 85, 0.5);
+            background: rgba(246, 207, 85, 0.14);
+            color: #f6cf55;
+        }
+
         .chip {
             border-radius: 999px;
             border: 1px solid rgba(255,255,255,0.18);
@@ -632,6 +670,15 @@
             <div class="chips">
                 {% for date_item in multileague_home.date_options %}
                 <a href="?home_date={{ date_item.value }}{% if liga %}&liga={{ liga }}{% endif %}{% if selected_match_key %}&match_key={{ selected_match_key }}{% endif %}" class="chip {% if date_item.is_selected %}active{% endif %}">{{ date_item.label }}</a>
+                {% endfor %}
+            </div>
+
+            <div class="league-switcher">
+                {% for tab in league_tabs %}
+                <a class="league-pill {% if liga == tab.key %}active{% endif %}" href="/liga/{{ tab.key }}/{% if multileague_home.selected_date_value %}?home_date={{ multileague_home.selected_date_value }}{% endif %}">
+                    {% if tab.logo_url %}<img src="{{ tab.logo_url }}" alt="{{ tab.name }}">{% endif %}
+                    {{ tab.name }}
+                </a>
                 {% endfor %}
             </div>
 

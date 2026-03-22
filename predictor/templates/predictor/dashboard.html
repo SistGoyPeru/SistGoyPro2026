@@ -1552,30 +1552,11 @@
         </section>
 
         <nav class="league-tabs">
-            <a href="?liga=spain" class="league-tab {% if liga == 'spain' %}active{% endif %}">
-                <img class="league-logo" src="https://media.api-sports.io/football/leagues/140.png" alt="Liga 1 España"> Liga 1 España
+            {% for tab in league_tabs %}
+            <a href="?liga={{ tab.key }}" class="league-tab {% if liga == tab.key %}active{% endif %}">
+                {% if tab.logo_url %}<img class="league-logo" src="{{ tab.logo_url }}" alt="{{ tab.name }}">{% endif %} {{ tab.name }}
             </a>
-            <a href="?liga=bundesliga" class="league-tab {% if liga == 'bundesliga' %}active{% endif %}">
-                <img class="league-logo" src="https://media.api-sports.io/football/leagues/78.png" alt="Bundesliga 1"> Bundesliga 1
-            </a>
-            <a href="?liga=premier" class="league-tab {% if liga == 'premier' %}active{% endif %}">
-                <img class="league-logo" src="https://media.api-sports.io/football/leagues/39.png" alt="Premier League"> Premier League
-            </a>
-            <a href="?liga=seriea" class="league-tab {% if liga == 'seriea' %}active{% endif %}">
-                <img class="league-logo" src="https://media.api-sports.io/football/leagues/135.png" alt="Serie A Italia"> Serie A Italia
-            </a>
-            <a href="?liga=ligue1" class="league-tab {% if liga == 'ligue1' %}active{% endif %}">
-                <img class="league-logo" src="https://media.api-sports.io/football/leagues/61.png" alt="Ligue 1 Francia"> Ligue 1 Francia
-            </a>
-            <a href="?liga=primeiraliga" class="league-tab {% if liga == 'primeiraliga' %}active{% endif %}">
-                <img class="league-logo" src="https://media.api-sports.io/football/leagues/94.png" alt="Primeira Liga Portugal"> Primeira Liga Portugal
-            </a>
-            <a href="?liga=proleague" class="league-tab {% if liga == 'proleague' %}active{% endif %}">
-                <img class="league-logo" src="https://media.api-sports.io/football/leagues/144.png" alt="Pro League Bélgica"> Pro League Bélgica
-            </a>
-            <a href="?liga=eredivisie" class="league-tab {% if liga == 'eredivisie' %}active{% endif %}">
-                <img class="league-logo" src="https://media.api-sports.io/football/leagues/88.png" alt="Eredivisie Holanda"> Eredivisie Holanda
-            </a>
+            {% endfor %}
         </nav>
 
         <div class="quick-links">

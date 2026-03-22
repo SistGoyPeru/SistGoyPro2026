@@ -1319,11 +1319,11 @@ class MatchPredictionService:
             if not injuries_url:
                 continue
             try:
-                # Timeout: 10s connect, 12s read (total ~12s per request, 2 teams = ~24s max)
+                # Timeout agresivo para evitar bloqueos del worker en endpoints sincronos.
                 response = requests.get(
                     injuries_url, 
                     headers=self._browser_headers(), 
-                    timeout=(10, 12)
+                    timeout=(3, 4)
                 )
                 response.raise_for_status()
                 soup = BeautifulSoup(response.text, "html.parser")
@@ -2981,7 +2981,7 @@ class MatchPredictionService:
             "disclaimer": "Recomendacion estadistica, no garantia de resultado final.",
         }
 
-    def predict_match(self, match_key: str) -> dict[str, object]:
+    def predict_match(self, match_key: str, quick_context: bool = False) -> dict[str, object]:
         match_df = self.fixtures_df[self.fixtures_df["match_key"] == match_key]
         if match_df.empty:
             raise ValueError("No se encontro el encuentro seleccionado.")
@@ -3013,8 +3013,17 @@ class MatchPredictionService:
         feature_frame = pd.DataFrame([features], columns=FEATURE_COLUMNS)
         class_map = self._predict_probabilities(feature_frame)
 
-        weather = self._weather_context(home, match["fecha"], match["hora"])
-        players_status = self._players_context(home, away, str(match["fecha"]))
+        if quick_context:
+            weather = {"status": "No disponible", "reason": "Contexto remoto omitido por rendimiento"}
+            players_status = {
+                "status": "No disponible",
+                "note": "Contexto de bajas omitido en modo rapido.",
+                "source": "Local",
+                "items": [],
+            }
+        else:
+            weather = self._weather_context(home, match["fecha"], match["hora"])
+            players_status = self._players_context(home, away, str(match["fecha"]))
         players_by_team = self._group_players_by_team(players_status, home, away)
         home_table = self.standings_snapshot.get(home, {})
         away_table = self.standings_snapshot.get(away, {})
