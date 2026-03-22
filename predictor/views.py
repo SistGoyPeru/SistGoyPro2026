@@ -738,10 +738,10 @@ def _build_multileague_home(selected_date_raw: str | None) -> dict[str, object]:
 		try:
 			quick_prediction = service.predict_recommended_bet_fast(str(fixture.get("match_key", "")))
 		except Exception:
-			continue
+			quick_prediction = {}
 
-		recommended = quick_prediction.get("recommended_bet", {})
-		multiple = quick_prediction.get("multiple", {})
+		recommended = quick_prediction.get("recommended_bet", {}) if isinstance(quick_prediction, dict) else {}
+		multiple = quick_prediction.get("multiple", {}) if isinstance(quick_prediction, dict) else {}
 		entries.append(
 			{
 				"date_label": str(fixture.get("fecha", "")),
