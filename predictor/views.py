@@ -24,6 +24,7 @@ from .engine import (
 	get_prediction_service_superlig_turquia,
 	get_prediction_service_superleague_grecia,
 	get_prediction_service_premiership_escocia,
+	get_prediction_service_liga2_espana,
 )
 from .sync import refresh_fixture_links
 
@@ -40,6 +41,7 @@ LEAGUE_SERVICE_FACTORIES = {
 	"superlig_turquia": get_prediction_service_superlig_turquia,
 	"superleague_grecia": get_prediction_service_superleague_grecia,
 	"premiership_escocia": get_prediction_service_premiership_escocia,
+	"liga2_espana": get_prediction_service_liga2_espana,
 }
 
 VALID_LEAGUES = tuple(LEAGUE_SERVICE_FACTORIES.keys())
@@ -56,6 +58,7 @@ LEAGUE_NAMES = {
 	"superlig_turquia": "Süper Lig",
 	"superleague_grecia": "Super League",
 	"premiership_escocia": "Premiership",
+	"liga2_espana": "Liga 2 España",
 }
 
 LEAGUE_LOGO_URLS = {
@@ -70,6 +73,7 @@ LEAGUE_LOGO_URLS = {
 	"superlig_turquia": "https://media.api-sports.io/football/leagues/203.png",
 	"superleague_grecia": "https://media.api-sports.io/football/leagues/197.png",
 	"premiership_escocia": "https://media.api-sports.io/football/leagues/179.png",
+	"liga2_espana": "https://media.api-sports.io/football/leagues/435.png",
 }
 
 

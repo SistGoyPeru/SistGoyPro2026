@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 import re
@@ -796,6 +796,89 @@ PREMIERSHIP_ESCOCIA_CONFIG: dict = {
     "team_transfermarkt_ids": SC_TEAM_TRANSFERMARKT_IDS,
     "apifootball_league_id":  SC_APIFOOTBALL_LEAGUE_ID,
     "league_name":            "Premiership Escocia",
+}
+
+# ── Liga 2 España (Segunda División) ─────────────────────────────────────────
+SP2_TEAM_COORDS = {
+    "Burgos CF":             (42.3510, -3.6967),
+    "Real Valladolid":       (41.6523, -4.7245),
+    "Racing Santander":      (43.4623, -3.8099),
+    "Málaga CF":             (36.7213, -4.4214),
+    "Granada CF":            (37.1773, -3.5986),
+    "Real Sociedad B":       (43.3183, -1.9812),
+    "Cádiz CF":              (36.5008, -6.2684),
+    "SD Huesca":             (42.1401, -0.4089),
+    "UD Las Palmas":         (28.1000, -15.4563),
+    "Sporting Gijón":        (43.5363, -5.6370),
+    "UD Almería":            (36.8402, -2.4350),
+    "SD Eibar":              (43.1822, -2.4768),
+    "CD Castellón":          (39.9864, -0.0513),
+    "CD Leganés":            (40.3583, -3.7632),
+    "CD Mirandés":           (42.6775, -2.9356),
+    "AD Ceuta FC":           (35.8894, -5.3198),
+    "Real Zaragoza":         (41.6361, -0.9023),
+    "Deportivo La Coruña":   (43.3713, -8.4188),
+    "Cultural Leonesa":      (42.5987, -5.5671),
+    "Albacete":              (38.9943, -1.8564),
+    "Córdoba CF":            (37.8882, -4.7794),
+    "FC Andorra":            (42.5078, 1.5211),
+}
+SP2_TEAM_API_ALIASES: dict[str, str] = {
+    "Sporting Gijón":        "Sporting Gijon",
+    "Málaga CF":             "Malaga",
+    "Cádiz CF":              "Cadiz",
+    "CD Leganés":            "Leganes",
+    "CD Mirandés":           "Mirandes",
+    "Córdoba CF":            "Cordoba",
+    "Deportivo La Coruña":   "Deportivo La Coruna",
+    "UD Almería":            "Almeria",
+    "CD Castellón":          "Castellon",
+}
+SP2_TEAM_SCRAPE_ALIASES: dict[str, str] = {
+    "Sporting Gijón":        "Sporting Gijon",
+    "Málaga CF":             "Malaga",
+    "Cádiz CF":              "Cadiz CF",
+    "CD Leganés":            "Leganes",
+    "CD Mirandés":           "Mirandes",
+    "Córdoba CF":            "Cordoba CF",
+    "Deportivo La Coruña":   "Deportivo La Coruna",
+    "UD Almería":            "Almeria",
+    "CD Castellón":          "Castellon",
+}
+SP2_TEAM_TRANSFERMARKT_IDS: dict[str, int] = {
+    "Burgos CF":             7515,
+    "Real Valladolid":       366,
+    "Racing Santander":      1107,
+    "Málaga CF":             1084,
+    "Granada CF":            16795,
+    "Real Sociedad B":       13945,
+    "Cádiz CF":              2687,
+    "SD Huesca":             8610,
+    "UD Las Palmas":         472,
+    "Sporting Gijón":        3205,
+    "UD Almería":            3302,
+    "SD Eibar":              1533,
+    "CD Castellón":          1853,
+    "CD Leganés":            7871,
+    "CD Mirandés":           7586,
+    "AD Ceuta FC":           39383,
+    "Real Zaragoza":         301,
+    "Deportivo La Coruña":   897,
+    "Cultural Leonesa":      7531,
+    "Albacete":              1533,
+    "Córdoba CF":            2579,
+    "FC Andorra":            45898,
+}
+SP2_APIFOOTBALL_LEAGUE_ID = 435
+LIGA2_ESPANA_CONFIG: dict = {
+    "historical_csv":         BASE_DIR / "liga2_españa.csv",
+    "fixtures_csv":           BASE_DIR / "liga2_españa_encuentros.csv",
+    "team_coords":            SP2_TEAM_COORDS,
+    "team_api_aliases":       SP2_TEAM_API_ALIASES,
+    "team_scrape_aliases":    SP2_TEAM_SCRAPE_ALIASES,
+    "team_transfermarkt_ids": SP2_TEAM_TRANSFERMARKT_IDS,
+    "apifootball_league_id":  SP2_APIFOOTBALL_LEAGUE_ID,
+    "league_name":            "Liga 2 España",
 }
 
 
@@ -3237,6 +3320,11 @@ def get_prediction_service_superleague_grecia() -> MatchPredictionService:
 @lru_cache(maxsize=1)
 def get_prediction_service_premiership_escocia() -> MatchPredictionService:
     return MatchPredictionService(PREMIERSHIP_ESCOCIA_CONFIG)
+
+
+@lru_cache(maxsize=1)
+def get_prediction_service_liga2_espana() -> MatchPredictionService:
+    return MatchPredictionService(LIGA2_ESPANA_CONFIG)
 
 
 # Alias para compatibilidad

@@ -37,6 +37,9 @@ from actualizar_encuentros_superleaguegrecia import write_csv as superleague_gre
 from actualizar_encuentros_premierleagueescocia import download_page as premiership_escocia_download_page
 from actualizar_encuentros_premierleagueescocia import extract_matches as premiership_escocia_extract_matches
 from actualizar_encuentros_premierleagueescocia import write_csv as premiership_escocia_write_csv
+from actualizar_encuentros_liga2españa import download_page as liga2_espana_download_page
+from actualizar_encuentros_liga2españa import extract_matches as liga2_espana_extract_matches
+from actualizar_encuentros_liga2españa import write_csv as liga2_espana_write_csv
 
 from .engine import (
     get_prediction_service_bundesliga,
@@ -50,6 +53,7 @@ from .engine import (
     get_prediction_service_superlig_turquia,
     get_prediction_service_superleague_grecia,
     get_prediction_service_premiership_escocia,
+    get_prediction_service_liga2_espana,
 )
 from .models import FixtureLinkCache
 
@@ -69,6 +73,7 @@ LEAGUE_UPDATERS: dict[str, Updater] = {
     "superlig_turquia": (superlig_turquia_download_page, superlig_turquia_extract_matches, superlig_turquia_write_csv),
     "superleague_grecia": (superleague_grecia_download_page, superleague_grecia_extract_matches, superleague_grecia_write_csv),
     "premiership_escocia": (premiership_escocia_download_page, premiership_escocia_extract_matches, premiership_escocia_write_csv),
+    "liga2_espana": (liga2_espana_download_page, liga2_espana_extract_matches, liga2_espana_write_csv),
 }
 
 
@@ -93,6 +98,8 @@ def clear_service_cache(liga: str) -> None:
         get_prediction_service_superleague_grecia.cache_clear()
     elif liga == "premiership_escocia":
         get_prediction_service_premiership_escocia.cache_clear()
+    elif liga == "liga2_espana":
+        get_prediction_service_liga2_espana.cache_clear()
     else:
         get_prediction_service_spain.cache_clear()
 
